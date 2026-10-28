@@ -3,6 +3,7 @@
 import {useEffect,useMemo,useState} from "react";
 import type {HunterCategory,HunterDecision,HunterInput,HunterResult} from "../lib/talent-hunter";
 
+type QueuePreview={id:string;title:string;company:string;sourceUrl:string;category:string;textLength:number};
 type AiBudget={configured:boolean;todayCount:number;monthCount:number;reservedTodayUsd:number;reservedMonthUsd:number;limitDayUsd:number;limitMonthUsd:number;reservationUsd:number;model:string};
 type HunterCandidate={id:string;sourceKey:string;sourceUrl:string;externalId:string;title:string;company:string;location:string;category:HunterCategory;excerpt:string;status:string;fetchedAt:string};
 type HunterScanRun={id:string;sourceKey:string;status:string;fetchedCount:number;matchedCount:number;insertedCount:number;errorCode:string|null;completedAt:string};
@@ -42,6 +43,9 @@ export function TalentHunter(){
   const [queueBusy,setQueueBusy]=useState(false);
   const [budgetBusy,setBudgetBusy]=useState(false);
   const [aiBudget,setAiBudget]=useState<AiBudget|null>(null);
+  const [manualConsent,setManualConsent]=useState(false);
+  const [queueConsent,setQueueConsent]=useState(false);
+  const [queuePreview,setQueuePreview]=useState<QueuePreview|null>(null);
 
   useEffect(()=>{
     try{
@@ -130,11 +134,30 @@ export function TalentHunter(){
     }catch(e){setError(e instanceof Error?e.message:"Błąd konfiguracji limitów AI.");}
     finally{setBudgetBusy(false);}
   }
+  async function previewNext(){
+    setQueueBusy(true);setError("");setNotice("");setQueuePreview(null);setQueueConsent(false);
+    try{
+      const r=await fetch("/api/microsoft/talent-hunter/queue-analyze",{cache:"no-store"});
+      const x=await r.json() as {candidate?:QueuePreview|null;error?:string};
+      if(!r.ok)throw Error(x.error??"Nie udało się odczytać następnej oferty.");
+      if(x.candidate)setQueuePreview(x.candidate);
+      else setNotice("Nie ma dostępnej nowej oferty z kompletnym tekstem do analizy AI.");
+    }catch(e){setError(e instanceof Error?e.message:"Błąd podglądu kolejki.");}
+    finally{setQueueBusy(false);}
+  }
   async function analyzeNext(){
+    if(!queuePreview||!queueConsent){setError("Potwierdź świadomie płatną analizę wskazanej oferty.");return;}
     setQueueBusy(true);setError("");setNotice("");
     try{
+      const grant=await fetch("/api/microsoft/talent-hunter/approval",{
+        method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({mode:"queue",candidateId:queuePreview.id,confirmation:"ZATWIERDZAM_PLATNA_ANALIZE"})
+      });
+      const permit=await grant.json() as {approvalId?:string;error?:string};
+      if(!grant.ok||!permit.approvalId)throw Error(permit.error??"Nie udało się udzielić zgody na analizę.");
       const r=await fetch("/api/microsoft/talent-hunter/queue-analyze",{
-        method:"POST",headers:{"Content-Type":"application/json"},body:"{}"
+        method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({candidateId:queuePreview.id,approvalId:permit.approvalId})
       });
       const x=await r.json() as {error?:string;detail?:string;result?:HunterResult;usage?:{inputTokens:number;outputTokens:number}};
       if(!r.ok||!x.result)throw Error(x.error??"Analiza automatyczna nie powiodła się.");
@@ -149,10 +172,12 @@ export function TalentHunter(){
         setCandidates(j.candidates);setScanRuns(j.runs);
       }
       if(quota.ok)setAiBudget(await quota.json() as AiBudget);
+      setQueueConsent(false);setQueuePreview(null);
       setNotice("Analiza AI zakończona i zapisana w Neon: "+x.result.title+
         " · potencjał "+x.result.potential+"%. Zweryfikuj wynik przed zatwierdzeniem.");
       setTab("analizy");
-    }catch(e){setError(e instanceof Error?e.message:"Błąd analizy kolejki.");
+    }catch(e){setQueueConsent(false);setQueuePreview(null);
+      setError(e instanceof Error?e.message:"Błąd analizy kolejki.");
       const q=await fetch("/api/microsoft/talent-hunter/budget",{cache:"no-store"}).catch(()=>null);
       if(q?.ok)setAiBudget(await q.json() as AiBudget);
     }finally{setQueueBusy(false);}
@@ -175,20 +200,29 @@ export function TalentHunter(){
   }
   function useCandidate(candidate:HunterCandidate){
     setForm({title:candidate.title,company:candidate.company,location:candidate.location,sourceUrl:candidate.sourceUrl,category:candidate.category,text:candidate.excerpt});
-    setTab("radar");setNotice("Załadowano ogłoszenie z KPRM. Zweryfikuj dane i treść przed analizą.");setError("");
+    setTab("radar");setManualConsent(false);setNotice("Załadowano ogłoszenie z KPRM. Zweryfikuj dane i treść przed analizą.");setError("");
   }
   const current=records.find(r=>r.id===selected)??records[0]??null;
   const approved=records.filter(r=>r.decision==="zatwierdzone");
   const ranked=useMemo(()=>[...records].filter(x=>(x.company+" "+x.title).toLocaleLowerCase("pl-PL").includes(filter.toLocaleLowerCase("pl-PL"))).sort((a,b)=>b.score-a.score),[records,filter]);
-  const update=(k:keyof HunterInput,v:string)=>setForm(s=>({...s,[k]:v}));
+  const update=(k:keyof HunterInput,v:string)=>{setManualConsent(false);setForm(s=>({...s,[k]:v}));};
   async function analyze(e:React.FormEvent<HTMLFormElement>){
-    e.preventDefault();setBusy(true);setError("");setNotice("");
+    e.preventDefault();
+    if(!manualConsent){setError("Przed płatną analizą zaznacz świadome zatwierdzenie zadania.");return;}
+    setBusy(true);setError("");setNotice("");
     try{
+      const grant=await fetch("/api/microsoft/talent-hunter/approval",{
+        method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({mode:"manual",job:form,confirmation:"ZATWIERDZAM_PLATNA_ANALIZE"})
+      });
+      const permit=await grant.json() as {approvalId?:string;error?:string};
+      if(!grant.ok||!permit.approvalId)throw Error(permit.error??"Nie udało się potwierdzić zgody.");
       const res=await fetch("/api/microsoft/talent-hunter/analyze",{method:"POST",
-        headers:{"Content-Type":"application/json"},body:JSON.stringify(form),cache:"no-store"});
+        headers:{"Content-Type":"application/json"},body:JSON.stringify({...form,approvalId:permit.approvalId}),cache:"no-store"});
       const payload=await res.json() as {error?:string;result?:HunterResult;aiConfigured?:boolean;persisted?:boolean;storageWarning?:string};
       if(!res.ok||!payload.result)throw Error(payload.error??"Analiza nie powiodła się.");
       const job=payload.result;
+      setManualConsent(false);
       const duplicate=records.find(x=>x.sourceUrl&&job.sourceUrl&&x.sourceUrl===job.sourceUrl);
       if(duplicate){setNotice("Znaleziono wcześniejszą analizę tego URL — nową zapisano jako osobną wersję. Porównaj wyniki w Historii.");}
       save([job,...records]);setSelected(job.id);setDecisionNote("");setTab("analizy");
@@ -198,7 +232,7 @@ export function TalentHunter(){
       if(payload.persisted){setStorageMode("postgres");}
       else if(payload.storageWarning)setNotice(payload.storageWarning);
       else setNotice("Zapis lokalny — podłącz bazę PostgreSQL, aby historia była dostępna na innych urządzeniach.");
-    }catch(err){setError(err instanceof Error?err.message:"Nie udało się wykonać analizy.");}
+    }catch(err){setManualConsent(false);setError(err instanceof Error?err.message:"Nie udało się wykonać analizy.");}
     finally{setBusy(false);}
   }
   async function decide(decision:HunterDecision){
@@ -223,7 +257,7 @@ export function TalentHunter(){
     <div className="th-top">
       <div className="th-brandline"><div className="th-mark">TH</div><div>
         <div className="th-overline">PAMIZE / DIGITAL WORKFORCE</div>
-        <h2>Talent Hunter <span>v1.2</span></h2>
+        <h2>Talent Hunter <span>v1.3</span></h2>
         <p>Od ogłoszenia o pracę do kwalifikowanego leada.</p>
       </div></div>
       <div className="th-service">
@@ -268,7 +302,11 @@ export function TalentHunter(){
             </div>
             <label>Link do ogłoszenia (opcjonalny)<input type="url" value={form.sourceUrl} onChange={e=>update("sourceUrl",e.target.value)} placeholder="https://..." /></label>
             <label>Treść ogłoszenia — obowiązki i wymagania<textarea required minLength={160} maxLength={16000} rows={11} value={form.text} onChange={e=>update("text",e.target.value)} placeholder="Wklej treść rzeczywistego ogłoszenia z sekcją obowiązków. Adres URL jest tylko referencją: w MVP nie pobieramy stron automatycznie."/></label>
-            <div className="th-form-foot"><small>{form.text.length.toLocaleString("pl-PL")} / 16 000 znaków</small><button className="th-action" type="submit" disabled={busy||form.text.trim().length<160}>{busy?"Analizuję…":"Przeanalizuj ogłoszenie →"}</button></div>
+            <label style={{display:"flex",gap:9,alignItems:"flex-start",marginTop:10}}>
+              <input type="checkbox" checked={manualConsent} onChange={e=>setManualConsent(e.target.checked)} style={{width:18,height:18,flexShrink:0}}/>
+              <span>Świadomie zatwierdzam jedną płatną analizę tego ogłoszenia w OpenAI API. Znam limit prób i mogę sprawdzić go w zakładce Skaner ofert. Bez tej zgody Synapse nie wywoła modelu.</span>
+            </label>
+            <div className="th-form-foot"><small>{form.text.length.toLocaleString("pl-PL")} / 16 000 znaków</small><button className="th-action" type="submit" disabled={busy||!manualConsent||form.text.trim().length<160}>{busy?"Analizuję…":"Zatwierdź i przeanalizuj →"}</button></div>
           </form>
         </section>
         <aside className="th-panel th-explain">
@@ -292,7 +330,21 @@ export function TalentHunter(){
         </div>
         <div className="th-alert th-note" style={{marginTop:12}}>
           <strong>Kontrolowana analiza z kolejki:</strong> Synapse wybierze jedno kompletne, nowe ogłoszenie KPRM i samodzielnie przeprowadzi analizę OpenAI, zapisze ją w Neon i umieści w rankingu. Nie wyśle wiadomości.
-          <div style={{marginTop:10}}><button className="th-action" disabled={queueBusy||scannerState!=="ready"||!aiBudget?.configured} onClick={()=>void analyzeNext()}>{queueBusy?"Analizuję ofertę…":"Analizuj automatycznie 1 ofertę →"}</button></div>
+          <div style={{marginTop:10}}>
+            {!queuePreview?<button className="th-action" disabled={queueBusy||scannerState!=="ready"||!aiBudget?.configured} onClick={()=>void previewNext()}>{queueBusy?"Sprawdzam kolejkę…":"Pokaż następną ofertę do zatwierdzenia →"}</button>:
+            <div style={{border:"1px solid #9bb8cc",borderRadius:8,padding:12,marginTop:10}}>
+              <strong>{queuePreview.company} · {queuePreview.title}</strong>
+              <p><small>Źródło: {queuePreview.sourceUrl} · długość opisu: {queuePreview.textLength} znaków</small></p>
+              <label style={{display:"flex",gap:9,alignItems:"flex-start",margin:"12px 0"}}>
+                <input type="checkbox" checked={queueConsent} onChange={e=>setQueueConsent(e.target.checked)} style={{width:18,height:18,flexShrink:0}}/>
+                <span>Zatwierdzam płatną analizę AI dokładnie tej oferty. Rozumiem, że przy wykonaniu zarezerwowana zostanie jedna próba w budżecie Synapse.</span>
+              </label>
+              <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                <button className="th-action" disabled={queueBusy||!queueConsent} onClick={()=>void analyzeNext()}>{queueBusy?"Analizuję…":"Potwierdź i uruchom jedną analizę AI"}</button>
+                <button type="button" className="th-action th-action-outline" disabled={queueBusy} onClick={()=>{setQueuePreview(null);setQueueConsent(false);}}>Anuluj</button>
+              </div>
+            </div>}
+          </div>
         </div>
         {scannerState==="migration"&&<div className="th-alert th-note">Tabele skanera nie zostały jeszcze utworzone. <button className="th-action" type="button" disabled={scanBusy} style={{marginLeft:12}} onClick={()=>void setupScanner()}>{scanBusy?"Przygotowuję bazę…":"Aktywuj tabele skanera w Neon"}</button> <small>Bez usuwania dotychczasowych analiz.</small></div>}
         {scannerState==="login"&&<div className="th-alert">Wymagane połączenie konta Microsoft właściciela. <a href="/knowledge-live">Zaloguj się w Synapse Knowledge →</a></div>}
