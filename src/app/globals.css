@@ -149,3 +149,18 @@ h1,h2,h3,h4,p{margin-top:0}
 @media(max-width:1080px){.knowledge-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.knowledge-browser{grid-template-columns:1fr}.knowledge-items,.knowledge-detail{min-height:0}.knowledge-detail{position:static}.knowledge-items-list{max-height:520px}.knowledge-next{display:block}.knowledge-next .pill{margin-top:16px}}
 @media(max-width:780px){.knowledge-controls{grid-template-columns:1fr 1fr}.knowledge-search-label{grid-column:span 2}.knowledge-reset{align-self:end}.knowledge-detail{padding:20px}}
 @media(max-width:480px){.knowledge-summary{grid-template-columns:1fr 1fr;gap:8px}.knowledge-summary>div{padding:14px}.knowledge-summary strong{font-size:25px}.knowledge-summary .knowledge-source{font-size:18px}.knowledge-controls{grid-template-columns:1fr}.knowledge-search-label{grid-column:span 1}.knowledge-meta>div{grid-template-columns:1fr;gap:3px}.knowledge-filter-panel{padding:16px}.knowledge-detail h2{font-size:22px}}
+
+
+/* Microsoft Graph delegated read-only connection */
+.microsoft-sync-panel{display:flex;align-items:flex-start;justify-content:space-between;gap:24px;border-color:#365d72;background:linear-gradient(120deg,#142d41,#111d2f)}
+.microsoft-sync-copy{flex:1;min-width:0}
+.microsoft-sync-copy .eyebrow{margin-bottom:8px}
+.microsoft-sync-copy h2{font-size:20px;margin:0 0 10px;letter-spacing:-.02em}
+.microsoft-sync-copy p{font-size:12px;color:#aec3d5;line-height:1.7;margin:0;max-width:710px}
+.microsoft-sync-copy .microsoft-last-sync{color:#80d3e9;margin-top:10px;font-weight:700}
+.microsoft-sync-copy .microsoft-sync-error{color:#ffbdbd;border-left:3px solid #d88484;padding-left:10px;margin-top:12px}
+.microsoft-sync-copy .microsoft-sync-warning{color:#f2d18d;margin-top:12px}
+.microsoft-sync-buttons{min-width:195px;display:flex;flex-direction:column;gap:9px;align-items:stretch}
+.microsoft-sync-buttons .btn{white-space:nowrap;text-align:center}
+.microsoft-sync-mode{display:block;color:#a2b3c6;font-size:9px;letter-spacing:.07em;text-align:center;line-height:1.7;padding-top:4px}
+@media(max-width:840px){.microsoft-sync-panel{flex-direction:column}.microsoft-sync-buttons{width:100%;min-width:0}.microsoft-sync-mode{text-align:left}}
