@@ -46,7 +46,12 @@ export function TalentHunter(){
       if(r.status===401){setStorageMode("connect");return;}
       if(!r.ok){setStorageMode("error");return;}
       const x=await r.json() as {configured:boolean;records:HunterResult[]};
-      if(x.configured){setRecords(x.records);setStorageMode("postgres");}
+      if(x.configured){
+        setRecords(x.records);
+        const ids=new Set(x.records.map(item=>item.id));
+        setLocalBackup(prev=>prev.filter(item=>!ids.has(item.id)));
+        setStorageMode("postgres");
+      }
       else setStorageMode("local");
     }).catch(()=>setStorageMode("error"));
   },[]);
@@ -54,7 +59,12 @@ export function TalentHunter(){
   const save=(list:HunterResult[])=>{
     const next=list.slice(0,100);setRecords(next);
     // Browser cache is retained as a recovery copy until migration is verified.
-    try{window.localStorage.setItem(STORAGE,JSON.stringify(next));}catch{setNotice("Przeglądarka nie zapisuje historii. Zachowaj wynik analizy osobno.");}
+    try{
+      const previous:unknown=JSON.parse(window.localStorage.getItem(STORAGE)??"[]");
+      const old=Array.isArray(previous)?previous as HunterResult[]:[];
+      const keep=old.filter(item=>!next.some(x=>x.id===item.id));
+      window.localStorage.setItem(STORAGE,JSON.stringify([...next,...keep].slice(0,100)));
+    }catch{setNotice("Przeglądarka nie zapisuje historii. Zachowaj wynik analizy osobno.");}
   };
   async function importLocal(){
     setBusy(true);setError("");setNotice("");
