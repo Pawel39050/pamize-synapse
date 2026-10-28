@@ -4,6 +4,7 @@ import {analyzeHunter} from "../../../../../lib/talent-hunter-engine";
 import {synapseOwner} from "../../../../../lib/synapse-owner";
 import {reserveAiBudget,completeAiBudget} from "../../../../../lib/hunter-ai-budget";
 import {storeHunterRecord} from "../../../../../lib/synapse-db";
+import {consumeAiApproval,validUuid} from "../../../../../lib/hunter-ai-approval";
 import type {HunterResult,HunterInput} from "../../../../../lib/talent-hunter";
 
 export const runtime="nodejs";
@@ -12,12 +13,40 @@ export const maxDuration=60;
 const TENANT="pamize-internal";
 function reply(data:unknown,status=200){return NextResponse.json(data,{status,headers:{"Cache-Control":"no-store, private"}});}
 type Candidate={id:string;source_url:string;title:string;company:string;location:string;job_excerpt:string;category:"pzp"|"zakupy"};
+export async function GET(request:NextRequest){
+  if(!synapseOwner(request))return reply({error:"Zaloguj się na konto Microsoft właściciela."},401);
+  if(!process.env.DATABASE_URL)return reply({error:"Brak bazy PostgreSQL."},503);
+  try{
+    const sql=neon(process.env.DATABASE_URL);
+    const rows=await sql`SELECT id,title,company,source_url,category,length(job_excerpt) AS text_length
+      FROM synapse_hunter_candidates
+      WHERE tenant_id=${TENANT} AND status='nowe'
+        AND length(job_excerpt) BETWEEN 160 AND 16000
+        AND length(title) BETWEEN 4 AND 140 AND length(company) BETWEEN 4 AND 140
+        AND source_url LIKE 'https://nabory.kprm.gov.pl/%'
+      ORDER BY fetched_at DESC,id LIMIT 1`;
+    const candidate=rows[0];
+    return reply({candidate:candidate?{
+      id:String(candidate.id),title:String(candidate.title),company:String(candidate.company),
+      sourceUrl:String(candidate.source_url),category:String(candidate.category),textLength:Number(candidate.text_length)
+    }:null});
+  }catch{return reply({error:"Podgląd kolejki jest niedostępny."},503);}
+}
 export async function POST(request:NextRequest){
   const owner=synapseOwner(request);
   if(!owner)return reply({error:"Połącz konto Microsoft właściciela."},401);
   if(request.headers.get("origin")!==new URL(request.url).origin)return reply({error:"Niepoprawne pochodzenie żądania."},403);
   if(!process.env.OPENAI_API_KEY)return reply({error:"Brak klucza OpenAI."},503);
   if(!process.env.DATABASE_URL)return reply({error:"Brak bazy PostgreSQL."},503);
+  let requested:unknown,approvalId:unknown;
+  try{
+    const body=await request.json() as {candidateId?:unknown;approvalId?:unknown};
+    requested=body.candidateId;approvalId=body.approvalId;
+  }catch{return reply({error:"Niepoprawne żądanie zatwierdzenia."},400);}
+  if(!validUuid(requested))return reply({error:"Wskaż konkretną ofertę do zatwierdzenia."},400);
+  let approved=false;
+  try{approved=await consumeAiApproval(owner.id,"queue",requested,approvalId);}catch{approved=false;}
+  if(!approved)return reply({error:"Brak ważnej, jednorazowej zgody właściciela na tę ofertę."},403);
   const sql=neon(process.env.DATABASE_URL);
   let candidate:Candidate|null=null;
   let reservationId:string|null=null;
@@ -27,18 +56,18 @@ export async function POST(request:NextRequest){
     const rows=await sql`
       WITH picked AS (
         SELECT id FROM synapse_hunter_candidates
-        WHERE tenant_id=${TENANT} AND status='nowe'
+        WHERE tenant_id=${TENANT} AND id=${requested}::uuid AND status='nowe'
           AND length(job_excerpt) BETWEEN 160 AND 16000
           AND length(title) BETWEEN 4 AND 140 AND length(company) BETWEEN 4 AND 140
           AND source_url LIKE 'https://nabory.kprm.gov.pl/%'
-        ORDER BY fetched_at DESC,id LIMIT 1 FOR UPDATE SKIP LOCKED
+        LIMIT 1 FOR UPDATE SKIP LOCKED
       )
       UPDATE synapse_hunter_candidates c
       SET status='do_uzupelnienia'
       FROM picked p
       WHERE c.id=p.id
       RETURNING c.id,c.source_url,c.title,c.company,c.location,c.job_excerpt,c.category`;
-    if(!rows.length)return reply({error:"Brak nowych ogłoszeń z wystarczającym opisem. Pozostałe możesz sprawdzić ręcznie."},404);
+    if(!rows.length)return reply({error:"Oferta nie jest już dostępna do analizy. Odśwież podgląd i zatwierdź ponownie."},409);
     const row=rows[0];
     candidate={id:String(row.id),source_url:String(row.source_url),title:String(row.title),
       company:String(row.company),location:String(row.location),job_excerpt:String(row.job_excerpt),
