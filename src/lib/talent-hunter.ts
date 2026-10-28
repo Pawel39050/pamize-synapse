@@ -18,9 +18,15 @@ export function normalizedTasks(tasks:HunterTask[]):HunterTask[]{
   const trimmed=tasks.slice(0,10).filter(t=>t.name.trim()&&t.evidence.trim());
   const sum=trimmed.reduce((a,t)=>a+Math.max(0,t.share),0);
   if(sum<=0)return [];
+  // Largest-remainder normalization: shares always sum to 100 and never become negative.
+  const fractional=trimmed.map((t,i)=>({index:i,raw:100*Math.max(0,t.share)/sum}));
+  const shares=fractional.map(x=>Math.floor(x.raw));
+  const missing=100-shares.reduce((a,b)=>a+b,0);
+  const byRemainder=[...fractional].sort((a,b)=>(b.raw-Math.floor(b.raw))-(a.raw-Math.floor(a.raw)));
+  for(let i=0;i<missing;i++)shares[byRemainder[i].index]+=1;
   return trimmed.map((t,i)=>({...t,name:t.name.slice(0,140),evidence:t.evidence.slice(0,260),
-    share:i===trimmed.length-1?100-trimmed.slice(0,-1).reduce((a,x)=>a+Math.round(100*Math.max(0,x.share)/sum),0):Math.round(100*Math.max(0,t.share)/sum),
-    automatable:clamp(t.automatable),confidence:["niska","średnia","wysoka"].includes(t.confidence)?t.confidence:"niska"
+    share:shares[i],automatable:clamp(t.automatable),
+    confidence:["niska","średnia","wysoka"].includes(t.confidence)?t.confidence:"niska"
   }));
 }
 export function buildHunterResult(input:HunterInput,data:{
@@ -32,8 +38,9 @@ export function buildHunterResult(input:HunterInput,data:{
   const quality=clamp(data.quality??25);
   const feasibility=clamp(data.feasibility??35),economic=clamp(data.economic??30);
   const score=clamp(potential*.4+feasibility*.25+economic*.2+quality*.15);
-  // No strong-lead badge without evidence: the job ad rarely specifies actual time shares.
-  const strong=potential>=60&&quality>=70&&tasks.some(t=>t.confidence==="wysoka")&&engine==="ai";
+  // Quality and task confidence are separate from uncertain time-share assumptions.
+  // No automatic approval: 'silny lead' remains a hypothesis requiring human review.
+  const strong=potential>=60&&quality>=70&&tasks.filter(t=>t.confidence!=="niska").length>=2&&engine==="ai";
   const classification=strong?"silny lead":potential>=40?"do diagnozy":"niski priorytet";
   return {
     id:crypto.randomUUID(),createdAt:new Date().toISOString(),methodology:"1.0",
