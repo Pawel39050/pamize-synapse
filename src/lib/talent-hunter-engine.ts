@@ -94,7 +94,7 @@ export async function analyzeHunter(request:NextRequest){
         "Model AI nie wykonał analizy (HTTP "+res.status+").";
       return reply({error:message,apiErrorCode:code},502);
     }
-    const data=await res.json() as {output?:Array<{type?:string;content?:Array<{type?:string;text?:string}>}>;usage?:{total_tokens?:number}};
+    const data=await res.json() as {output?:Array<{type?:string;content?:Array<{type?:string;text?:string}>}>;usage?:{total_tokens?:number;input_tokens?:number;output_tokens?:number}};
     const text=data.output?.flatMap(o=>o.content??[]).find(c=>c.type==="output_text")?.text;
     if(!text)return reply({error:"Model nie zwrócił analizy."},502);
     const parsed=JSON.parse(text) as ModelAnalysis;
@@ -117,7 +117,10 @@ export async function analyzeHunter(request:NextRequest){
       feasibility:Number(parsed.feasibility)||0,economic:Number(parsed.economic)||0
     },"ai",MODEL);
     result.tokenUsage=Number(data.usage?.total_tokens)||null;
-    return reply({result,aiConfigured:true});
+    return reply({result,aiConfigured:true,usage:{
+      inputTokens:Math.max(0,Number(data.usage?.input_tokens)||0),
+      outputTokens:Math.max(0,Number(data.usage?.output_tokens)||0)
+    }});
   }catch(e){
     console.error("[Talent Hunter] analysis failed",e instanceof Error?e.name:"unexpected");
     return reply({error:"Nie udało się przeprowadzić analizy. Spróbuj ponownie."},502);
