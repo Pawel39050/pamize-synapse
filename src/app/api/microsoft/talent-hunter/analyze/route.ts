@@ -4,6 +4,7 @@ import {synapseOwner} from "../../../../../lib/synapse-owner";
 import {storeHunterRecord,synapseDbConfigured} from "../../../../../lib/synapse-db";
 import {recordCandidateAnalyzed} from "../../../../../lib/hunter-scan-db";
 import {reserveAiBudget,completeAiBudget} from "../../../../../lib/hunter-ai-budget";
+import {consumeAiApproval} from "../../../../../lib/hunter-ai-approval";
 
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
@@ -17,6 +18,15 @@ export async function POST(request:NextRequest){
   const parsed=request.clone();
   let reservationId:string|null=null;
   if(process.env.OPENAI_API_KEY){
+    // A paid AI request cannot proceed without a fresh single-use owner approval.
+    let approved=false;
+    try{
+      const body=await request.clone().json() as {approvalId?:string;category?:string;title?:string;company?:string;location?:string;sourceUrl?:string;text?:string};
+      approved=await consumeAiApproval(session.id,"manual",body,body.approvalId);
+    }catch{approved=false;}
+    if(!approved)return NextResponse.json(
+      {error:"Wymagana nowa, świadoma zgoda na tę konkretną płatną analizę."},
+      {status:403,headers:{"Cache-Control":"no-store, private"}});
     try{
       const reserve=await reserveAiBudget(session.id,"manual");
       if("error" in reserve)return NextResponse.json({error:reserve.error==="budget_exhausted"?
