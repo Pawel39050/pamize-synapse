@@ -3,9 +3,12 @@
 import {useEffect,useMemo,useState} from "react";
 import type {HunterCategory,HunterDecision,HunterInput,HunterResult} from "../lib/talent-hunter";
 
+type HunterCandidate={id:string;sourceKey:string;sourceUrl:string;externalId:string;title:string;company:string;location:string;category:HunterCategory;excerpt:string;status:string;fetchedAt:string};
+type HunterScanRun={id:string;sourceKey:string;status:string;fetchedCount:number;matchedCount:number;insertedCount:number;errorCode:string|null;completedAt:string};
 const STORAGE="pamize.talent-hunter.v1.records";
 const TABS=[
   {id:"radar",label:"Radar ofert"},
+  {id:"skaner",label:"Skaner ofert"},
   {id:"analizy",label:"Analizy stanowisk"},
   {id:"ranking",label:"Ranking możliwości"},
   {id:"leady",label:"Leady PAMIZE"},
@@ -31,6 +34,10 @@ export function TalentHunter(){
   const [decisionNote,setDecisionNote]=useState("");
   const [storageMode,setStorageMode]=useState<"checking"|"local"|"postgres"|"connect"|"error">("checking");
   const [localBackup,setLocalBackup]=useState<HunterResult[]>([]);
+  const [candidates,setCandidates]=useState<HunterCandidate[]>([]);
+  const [scanRuns,setScanRuns]=useState<HunterScanRun[]>([]);
+  const [scannerState,setScannerState]=useState<"checking"|"ready"|"migration"|"login"|"error">("checking");
+  const [scanBusy,setScanBusy]=useState(false);
 
   useEffect(()=>{
     try{
@@ -54,6 +61,13 @@ export function TalentHunter(){
       }
       else setStorageMode("local");
     }).catch(()=>setStorageMode("error"));
+    fetch("/api/microsoft/talent-hunter/candidates",{cache:"no-store"}).then(async res=>{
+      if(res.status===401){setScannerState("login");return;}
+      if(res.status===503){setScannerState("migration");return;}
+      if(!res.ok){setScannerState("error");return;}
+      const x=await res.json() as {candidates:HunterCandidate[];runs:HunterScanRun[]};
+      setCandidates(x.candidates);setScanRuns(x.runs);setScannerState("ready");
+    }).catch(()=>setScannerState("error"));
   },[]);
   const choose=(r:HunterResult)=>{setSelected(r.id);setDecisionNote(r.decisionNote);setTab("analizy");};
   const save=(list:HunterResult[])=>{
@@ -84,6 +98,26 @@ export function TalentHunter(){
     }catch(e){setError(e instanceof Error?e.message:"Błąd importu");}
     finally{setBusy(false);}
   }
+  async function scanNow(){
+    setScanBusy(true);setError("");setNotice("");
+    try{
+      const response=await fetch("/api/microsoft/talent-hunter/candidates",{
+        method:"POST",headers:{"Content-Type":"application/json"},body:"{}"
+      });
+      const data=await response.json() as {error?:string;run?:HunterScanRun;sample?:HunterCandidate[]};
+      if(!response.ok)throw Error(data.run?.errorCode?("Skanowanie nie powiodło się: "+data.run.errorCode):(data.error??"Skanowanie nie powiodło się."));
+      const list=await fetch("/api/microsoft/talent-hunter/candidates",{cache:"no-store"});
+      if(!list.ok)throw Error("Skan zakończony, ale odczyt kolejki nie powiódł się.");
+      const x=await list.json() as {candidates:HunterCandidate[];runs:HunterScanRun[]};
+      setCandidates(x.candidates);setScanRuns(x.runs);setScannerState("ready");
+      setNotice("Skan KPRM: "+(data.run?.matchedCount??0)+" dopasowań, "+(data.run?.insertedCount??0)+" nowych pozycji. Bez użycia płatnego AI.");
+    }catch(e){setError(e instanceof Error?e.message:"Błąd skanera.");}
+    finally{setScanBusy(false);}
+  }
+  function useCandidate(candidate:HunterCandidate){
+    setForm({title:candidate.title,company:candidate.company,location:candidate.location,sourceUrl:candidate.sourceUrl,category:candidate.category,text:candidate.excerpt});
+    setTab("radar");setNotice("Załadowano ogłoszenie z KPRM. Zweryfikuj dane i treść przed analizą.");setError("");
+  }
   const current=records.find(r=>r.id===selected)??records[0]??null;
   const approved=records.filter(r=>r.decision==="zatwierdzone");
   const ranked=useMemo(()=>[...records].filter(x=>(x.company+" "+x.title).toLocaleLowerCase("pl-PL").includes(filter.toLocaleLowerCase("pl-PL"))).sort((a,b)=>b.score-a.score),[records,filter]);
@@ -99,6 +133,9 @@ export function TalentHunter(){
       const duplicate=records.find(x=>x.sourceUrl&&job.sourceUrl&&x.sourceUrl===job.sourceUrl);
       if(duplicate){setNotice("Znaleziono wcześniejszą analizę tego URL — nową zapisano jako osobną wersję. Porównaj wyniki w Historii.");}
       save([job,...records]);setSelected(job.id);setDecisionNote("");setTab("analizy");
+      if(job.sourceUrl&&candidates.some(x=>x.sourceUrl===job.sourceUrl)){
+        setCandidates(prev=>prev.map(x=>x.sourceUrl===job.sourceUrl?{...x,status:"przeanalizowane"}:x));
+      }
       if(payload.persisted){setStorageMode("postgres");}
       else if(payload.storageWarning)setNotice(payload.storageWarning);
       else setNotice("Zapis lokalny — podłącz bazę PostgreSQL, aby historia była dostępna na innych urządzeniach.");
@@ -127,7 +164,7 @@ export function TalentHunter(){
     <div className="th-top">
       <div className="th-brandline"><div className="th-mark">TH</div><div>
         <div className="th-overline">PAMIZE / DIGITAL WORKFORCE</div>
-        <h2>Talent Hunter <span>v1.0</span></h2>
+        <h2>Talent Hunter <span>v1.1</span></h2>
         <p>Od ogłoszenia o pracę do kwalifikowanego leada.</p>
       </div></div>
       <div className="th-service">
@@ -152,7 +189,7 @@ export function TalentHunter(){
         storageMode==="connect"?"Połącz konto Microsoft właściciela w Knowledge & Academy, aby uruchomić bezpieczne analizy. Aktualne wpisy pozostają w przeglądarce.":
         storageMode==="checking"?"Trwa sprawdzanie bazy i sesji Microsoft…":
         storageMode==="error"?"Baza nie odpowiada lub wymaga migracji SQL. Przeglądarka zachowuje zapisane wyniki; nie uruchamiaj nowego pilotażu do czasu weryfikacji.":"Aktualnie zapis lokalny w przeglądarce. Do wspólnej historii trzeba podłączyć Neon PostgreSQL."}
-        {" "}Automatyczny skaner i harmonogram nie są jeszcze aktywne.
+        {" "}Skaner KPRM ma osobny widok; analizy AI i kontakt z pracodawcami wymagają Twojej decyzji.
         {storageMode==="connect"&&<a className="th-link" href="/knowledge-live">Otwórz logowanie Microsoft →</a>}
         {storageMode==="postgres"&&localBackup.length>0&&<button type="button" className="th-action th-action-outline" disabled={busy} style={{marginLeft:12}} onClick={importLocal}>Zaimportuj {localBackup.length} lokalnych analiz do bazy</button>}
       </div>
@@ -164,10 +201,10 @@ export function TalentHunter(){
           <form onSubmit={analyze} className="th-form">
             <div className="th-formrow">
               <label>Obszar stanowiska<select value={form.category} onChange={e=>update("category",e.target.value)}><option value="pzp">Zamówienia publiczne / przetargi</option><option value="zakupy">Zakupy / logistyka operacyjna</option></select></label>
-              <label>Nazwa stanowiska<input maxLength={140} value={form.title} onChange={e=>update("title",e.target.value)} placeholder="Np. Specjalista ds. zamówień publicznych"/></label>
+              <label>Nazwa stanowiska<input required maxLength={140} value={form.title} onChange={e=>update("title",e.target.value)} placeholder="Np. Specjalista ds. zamówień publicznych"/></label>
             </div>
             <div className="th-formrow">
-              <label>Pracodawca<input maxLength={140} value={form.company} onChange={e=>update("company",e.target.value)} placeholder="Firma z ogłoszenia"/></label>
+              <label>Pracodawca<input required maxLength={140} value={form.company} onChange={e=>update("company",e.target.value)} placeholder="Firma z ogłoszenia"/></label>
               <label>Lokalizacja<input maxLength={140} value={form.location} onChange={e=>update("location",e.target.value)} placeholder="Np. Warszawa / zdalnie"/></label>
             </div>
             <label>Link do ogłoszenia (opcjonalny)<input type="url" value={form.sourceUrl} onChange={e=>update("sourceUrl",e.target.value)} placeholder="https://..." /></label>
@@ -181,6 +218,20 @@ export function TalentHunter(){
           <div className="th-explain-bottom"><strong>Próg kwalifikacji: 60%</strong><p>Nie oznacza automatycznie redukcji etatu ani gwarancji oszczędności. Udziały czasu wymagają ustalenia w discovery.</p></div>
         </aside>
       </div>}
+      {tab==="skaner"&&<section className="th-panel">
+        <div className="th-panel-heading"><div><span className="th-kicker">F01 · AUTOMATYCZNE POZYSKIWANIE</span><h3>Skaner ofert KPRM</h3><p className="th-muted">Oficjalne nabory służby cywilnej · źródło XML · zamówienia publiczne i zakupy</p></div>
+          <button className="th-action" type="button" disabled={scanBusy||scannerState!=="ready"} onClick={()=>void scanNow()}>{scanBusy?"Skanuję źródło…":"Skanuj teraz"}</button>
+        </div>
+        <div className="th-alert th-note"><strong>Kontrola kosztów:</strong> pobieranie i filtrowanie ogłoszeń nie uruchamia OpenAI. Analizę AI zlecasz oddzielnie po przeglądzie. Skan zaplanowany codziennie wymaga aktywacji przez administratora. Źródło: <a href="https://nabory.kprm.gov.pl/" target="_blank" rel="noreferrer noopener">KPRM · baza naborów</a>.</div>
+        {scannerState==="migration"&&<div className="th-alert th-error">Aby uruchomić skaner, zastosuj migrację SQL 002 w bazie Neon. <a href="https://github.com/radekdomagalski1978-glitch/pamize-synapse/blob/feature/synapse-foundation-v0.1/db/migrations/002_hunter_scanner.sql" target="_blank" rel="noreferrer noopener">Otwórz skrypt migracji →</a></div>}
+        {scannerState==="login"&&<div className="th-alert">Wymagane połączenie konta Microsoft właściciela. <a href="/knowledge-live">Zaloguj się w Synapse Knowledge →</a></div>}
+        {scannerState==="error"&&<div className="th-alert th-error">Nie udało się połączyć ze skanerem. Sprawdź logi Synapse.</div>}
+        {scanRuns.length>0&&<div className="th-fact"><span>Ostatni skan · {date(scanRuns[0].completedAt)}</span><strong>{scanRuns[0].status==="success"?"Zakończony":"Wymaga diagnostyki"} · {scanRuns[0].matchedCount} dopasowań · {scanRuns[0].insertedCount} nowych</strong><small>{scanRuns[0].errorCode??"Weryfikuj oryginalne ogłoszenia przed analizą."}</small></div>}
+        <div className="th-panel-heading"><h3>Kolejka odkrytych ofert</h3><span className="th-chip">{candidates.length} pozycji</span></div>
+        {candidates.length?<div className="th-history">{candidates.map(x=><div key={x.id} style={{padding:"12px 6px",borderBottom:"1px solid #dce5ed"}}>
+          <div style={{display:"flex",justifyContent:"space-between",gap:12,alignItems:"center",flexWrap:"wrap"}}><div><strong>{x.company}</strong><p style={{margin:"5px 0"}}>{x.title}{x.location?" · "+x.location:""}</p><small>{x.category==="pzp"?"Zamówienia publiczne":"Zakupy"} · {x.status} · <a href={x.sourceUrl} target="_blank" rel="noreferrer noopener">Oryginalne ogłoszenie ↗</a></small></div><button type="button" className="th-action th-action-outline" onClick={()=>useCandidate(x)}>Przygotuj analizę →</button></div>
+        </div>)}</div>:<p className="th-muted">{scannerState==="ready"?"Brak ofert w bazie. Kliknij Skanuj teraz, aby pobrać nowe ogłoszenia.":"Trwa inicjalizacja skanera lub wymagana jest konfiguracja."}</p>}
+      </section>}
       {tab==="analizy"&&(!current?<div className="th-empty"><h3>Nie ma jeszcze żadnej analizy</h3><p>Wklej rzeczywiste ogłoszenie w Radarze, a tutaj zobaczysz rozbicie zadań i scoring.</p><button className="th-action" onClick={()=>setTab("radar")}>Przejdź do Radaru</button></div>:
         <div className="th-columns th-analysis">
           <section className="th-panel">
@@ -221,10 +272,10 @@ export function TalentHunter(){
           {records.length?<div className="th-history">{records.map(x=><button key={x.id} onClick={()=>choose(x)}><span><strong>{x.company} · {x.title}</strong><small>{date(x.createdAt)} · {x.engine==="ai"?"AI":"Reguły"} · {x.decision}</small></span><b>{x.potential}% →</b></button>)}</div>:<p className="th-muted">Brak historii. Wykonaj pierwszą analizę w Radarze.</p>}
         </section>
         <aside className="th-panel"><span className="th-kicker">USTAWIENIA MVP</span><h3>Kontrola zakresu</h3>
-          <div className="th-fact"><span>Metodyka</span><strong>Talent Hunter v1.0</strong></div>
+          <div className="th-fact"><span>Metodyka</span><strong>Talent Hunter v1.1</strong></div>
           <div className="th-fact"><span>Obszary</span><strong>PZP · Zakupy i logistyka</strong></div>
           <div className="th-fact"><span>Próg kwalifikacji</span><strong>60%</strong></div>
-          <div className="th-fact"><span>Automatyczny skaner portali</span><strong>Nieaktywny</strong></div>
+          <div className="th-fact"><span>Skaner KPRM</span><strong>{scannerState==="ready"?"Gotowy · manualny i cykliczny":"Wymaga konfiguracji"}</strong></div>
           <div className="th-fact"><span>CRM i magazyn danych</span><strong>{storageMode==="postgres"?"PostgreSQL połączony; CRM planowany":"PostgreSQL do aktywacji; CRM planowany"}</strong></div>
           <div className="th-fact"><span>Wysyłanie wiadomości</span><strong>Wyłączone</strong></div>
           <p className="th-footnote">API odczytu i zapisu wymaga sesji Microsoft właściciela. Docelowa obsługa klientów i ról wymaga dodatkowych uprawnień.</p>
