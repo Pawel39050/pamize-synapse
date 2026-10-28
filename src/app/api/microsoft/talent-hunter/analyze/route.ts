@@ -3,6 +3,7 @@ import {analyzeHunter} from "../../../../../lib/talent-hunter-engine";
 import {synapseOwner} from "../../../../../lib/synapse-owner";
 import {storeHunterRecord,synapseDbConfigured} from "../../../../../lib/synapse-db";
 import {recordCandidateAnalyzed} from "../../../../../lib/hunter-scan-db";
+import {reserveAiBudget,completeAiBudget} from "../../../../../lib/hunter-ai-budget";
 
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
@@ -14,10 +15,25 @@ export async function POST(request:NextRequest){
   const origin=request.headers.get("origin");
   if(!origin||origin!==new URL(request.url).origin)return NextResponse.json({error:"Niepoprawne pochodzenie żądania."},{status:403});
   const parsed=request.clone();
+  let reservationId:string|null=null;
+  if(process.env.OPENAI_API_KEY){
+    try{
+      const reserve=await reserveAiBudget(session.id,"manual");
+      if("error" in reserve)return NextResponse.json({error:reserve.error==="budget_exhausted"?
+        "Osiągnięto limit analiz AI. Następny dostępny okres rozliczenia rozpocznie się w UTC.":
+        "Aktywuj rejestr budżetu AI w zakładce Skaner ofert."},{status:429});
+      reservationId=reserve.id;
+    }catch{
+      return NextResponse.json({error:"Aktywuj kontrolę kosztów AI w zakładce Skaner ofert przed kolejną analizą."},{status:503});
+    }
+  }
   const response=await analyzeHunter(request);
-  if(!response.ok)return response;
-  const body=await response.json() as {result?:import("../../../../../lib/talent-hunter").HunterResult;aiConfigured:boolean};
-  if(!body.result)return NextResponse.json({error:"Brak wyniku analizy."},{status:502});
+  const body=await response.json() as {result?:import("../../../../../lib/talent-hunter").HunterResult;aiConfigured:boolean;usage?:{inputTokens:number;outputTokens:number};error?:string};
+  if(reservationId){
+    try{await completeAiBudget(reservationId,body.usage??null,response.ok&&Boolean(body.result));}
+    catch{console.error("[Talent Hunter] usage audit finalization failed");}
+  }
+  if(!response.ok||!body.result)return NextResponse.json(body,{status:response.status,headers:{"Cache-Control":"no-store, private"}});
   if(!synapseDbConfigured())return NextResponse.json({...body,persisted:false,storage:"local"}, {headers:{"Cache-Control":"no-store, private"}});
   try{
     const input=await parsed.json() as {text?:string};
