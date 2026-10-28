@@ -15,6 +15,12 @@ const SCOPES = "openid profile email offline_access User.Read Files.Read";
 const SESSION_SECONDS = 30 * 24 * 60 * 60;
 const MAX_COOKIE_LENGTH = 3700;
 
+export class MicrosoftIntegrationError extends Error {
+  constructor(public readonly kind:string,public readonly status:number,public readonly code:string) {
+    super(kind+" ["+status+"] "+code);
+    this.name="MicrosoftIntegrationError";
+  }
+}
 export type AuthTransaction = {state:string; verifier:string; createdAt:number};
 export type MicrosoftSession = {refreshToken:string; id:string; email:string; createdAt:number};
 export type GraphItem = {
@@ -100,7 +106,10 @@ async function exchange(body:URLSearchParams):Promise<TokenResponse> {
     body,cache:"no-store",signal:AbortSignal.timeout(12000)
   });
   const json=await res.json() as TokenResponse;
-  if (!res.ok || !json.access_token || !json.refresh_token) throw new Error("Microsoft authorization/refresh failed.");
+  if (!res.ok || !json.access_token) {
+    // Avoid logging raw OAuth payloads or account identifiers.
+    throw new MicrosoftIntegrationError("token_request",res.status,json.error??"oauth_failed");
+  }
   return json;
 }
 function tokenParams():URLSearchParams {
@@ -128,7 +137,16 @@ export async function microsoftGraph<T>(accessToken:string,path:string):Promise<
   if (url.protocol!=="https:" || url.hostname!=="graph.microsoft.com" || !url.pathname.startsWith("/v1.0/"))
     throw new Error("Blocked unsafe Microsoft Graph endpoint.");
   const res=await fetch(url.toString(),{headers:{Authorization:`Bearer ${accessToken}`,Accept:"application/json"},cache:"no-store",signal:AbortSignal.timeout(12000)});
-  if (!res.ok) throw new Error(`Microsoft Graph request failed (HTTP ${res.status}).`);
+  if (!res.ok) {
+    // Only expose HTTP status and Graph error code; never user data or tokens.
+    let graphCode="graph_failed";
+    try {
+      const payload=await res.json() as {error?:{code?:string}};
+      const candidate=payload?.error?.code;
+      if(typeof candidate==="string" && /^[a-zA-Z0-9_.-]{1,80}$/.test(candidate))graphCode=candidate;
+    } catch { /* Graph can return a non-JSON error. */ }
+    throw new MicrosoftIntegrationError("graph_request",res.status,graphCode);
+  }
   return await res.json() as T;
 }
 export async function microsoftProfile(accessToken:string):Promise<{id:string;displayName?:string;mail?:string|null;userPrincipalName?:string|null}>{
@@ -145,7 +163,8 @@ export async function graphChildren(accessToken:string,path:string):Promise<Grap
   for(let page=0;next && page<5;page++){
     const current:string=next;
     const data:{value:GraphItem[];"@odata.nextLink"?:string}=await microsoftGraph(accessToken,current);
-    all.push(...(data.value??[]));
+    if(!Array.isArray(data.value))throw new MicrosoftIntegrationError("graph_response",502,"invalid_items");
+    all.push(...data.value);
     next=data["@odata.nextLink"]??null;
     if (all.length>600) throw new Error("Graph listing too large for the single-owner MVP.");
   }
