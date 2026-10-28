@@ -98,6 +98,20 @@ export function TalentHunter(){
     }catch(e){setError(e instanceof Error?e.message:"Błąd importu");}
     finally{setBusy(false);}
   }
+  async function setupScanner(){
+    setScanBusy(true);setError("");setNotice("");
+    try{
+      const res=await fetch("/api/microsoft/talent-hunter/setup",{method:"POST",headers:{"Content-Type":"application/json"},body:"{}"});
+      const data=await res.json() as {error?:string};
+      if(!res.ok)throw Error(data.error??"Nie udało się przygotować skanera.");
+      const latest=await fetch("/api/microsoft/talent-hunter/candidates",{cache:"no-store"});
+      if(!latest.ok)throw Error("Baza utworzona, ale odczyt kolejki nie powiódł się.");
+      const x=await latest.json() as {candidates:HunterCandidate[];runs:HunterScanRun[]};
+      setCandidates(x.candidates);setScanRuns(x.runs);setScannerState("ready");
+      setNotice("Tabele skanera utworzono w Neon. Możesz teraz uruchomić pierwszy skan KPRM.");
+    }catch(e){setError(e instanceof Error?e.message:"Błąd konfiguracji skanera.");}
+    finally{setScanBusy(false);}
+  }
   async function scanNow(){
     setScanBusy(true);setError("");setNotice("");
     try{
@@ -223,7 +237,7 @@ export function TalentHunter(){
           <button className="th-action" type="button" disabled={scanBusy||scannerState!=="ready"} onClick={()=>void scanNow()}>{scanBusy?"Skanuję źródło…":"Skanuj teraz"}</button>
         </div>
         <div className="th-alert th-note"><strong>Kontrola kosztów:</strong> pobieranie i filtrowanie ogłoszeń nie uruchamia OpenAI. Analizę AI zlecasz oddzielnie po przeglądzie. Skan zaplanowany codziennie wymaga aktywacji przez administratora. Źródło: <a href="https://nabory.kprm.gov.pl/" target="_blank" rel="noreferrer noopener">KPRM · baza naborów</a>.</div>
-        {scannerState==="migration"&&<div className="th-alert th-error">Aby uruchomić skaner, zastosuj migrację SQL 002 w bazie Neon. <a href="https://github.com/radekdomagalski1978-glitch/pamize-synapse/blob/feature/synapse-foundation-v0.1/db/migrations/002_hunter_scanner.sql" target="_blank" rel="noreferrer noopener">Otwórz skrypt migracji →</a></div>}
+        {scannerState==="migration"&&<div className="th-alert th-note">Tabele skanera nie zostały jeszcze utworzone. <button className="th-action" type="button" disabled={scanBusy} style={{marginLeft:12}} onClick={()=>void setupScanner()}>{scanBusy?"Przygotowuję bazę…":"Aktywuj tabele skanera w Neon"}</button> <small>Bez usuwania dotychczasowych analiz.</small></div>}
         {scannerState==="login"&&<div className="th-alert">Wymagane połączenie konta Microsoft właściciela. <a href="/knowledge-live">Zaloguj się w Synapse Knowledge →</a></div>}
         {scannerState==="error"&&<div className="th-alert th-error">Nie udało się połączyć ze skanerem. Sprawdź logi Synapse.</div>}
         {scanRuns.length>0&&<div className="th-fact"><span>Ostatni skan · {date(scanRuns[0].completedAt)}</span><strong>{scanRuns[0].status==="success"?"Zakończony":"Wymaga diagnostyki"} · {scanRuns[0].matchedCount} dopasowań · {scanRuns[0].insertedCount} nowych</strong><small>{scanRuns[0].errorCode??"Weryfikuj oryginalne ogłoszenia przed analizą."}</small></div>}
