@@ -158,7 +158,9 @@ export function isAllowedProfile(profile:{mail?:string|null;userPrincipalName?:s
   return [profile.mail,profile.userPrincipalName].some(candidate=>candidate?.trim().toLocaleLowerCase("en-US")===expected);
 }
 export async function graphChildren(accessToken:string,path:string):Promise<GraphItem[]> {
-  let next:string|null=`${GRAPH_ROOT}${path}`;
+  // Resolve the absolute Graph path once. GRAPH_ROOT already contains /v1.0;
+  // concatenating both strings duplicated the API version and caused HTTP 400 BadRequest.
+  let next:string|null=new URL(path,GRAPH_ROOT+"/").toString();
   const all:GraphItem[]=[];
   for(let page=0;next && page<5;page++){
     const current:string=next;
