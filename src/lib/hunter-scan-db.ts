@@ -55,6 +55,10 @@ export async function scanKprm():Promise<{run:HunterScanRun;sample:HunterCandida
   try{
     const response=await fetchKprmJobs();
     fetched=response.found;matched=response.matched;
+    if(matched===0){
+      // Only structural field names and aggregate counts; never log job content or personal data.
+      console.warn("[Hunter Scanner] KPRM feed shape",response.diagnostics);
+    }
     for(const job of response.jobs.slice(0,MAX_NEW_PER_RUN)){
       if(await insertCandidate(job))inserted++;
     }
