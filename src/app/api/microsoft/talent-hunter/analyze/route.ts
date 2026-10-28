@@ -2,6 +2,7 @@ import {NextRequest,NextResponse} from "next/server";
 import {analyzeHunter} from "../../../../../lib/talent-hunter-engine";
 import {synapseOwner} from "../../../../../lib/synapse-owner";
 import {storeHunterRecord,synapseDbConfigured} from "../../../../../lib/synapse-db";
+import {recordCandidateAnalyzed} from "../../../../../lib/hunter-scan-db";
 
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
@@ -21,6 +22,10 @@ export async function POST(request:NextRequest){
   try{
     const input=await parsed.json() as {text?:string};
     await storeHunterRecord(session.id,body.result,typeof input.text==="string"?input.text:"");
+    if(body.result.sourceUrl){
+      try{await recordCandidateAnalyzed(body.result.sourceUrl,body.result.id);}
+      catch{console.warn("[Talent Hunter] candidate status not updated (scanner migration may be pending)");}
+    }
     return NextResponse.json({...body,persisted:true,storage:"postgres"}, {headers:{"Cache-Control":"no-store, private"}});
   }catch{
     // Return the already paid-for analysis, but explicitly flag that it was not saved.
