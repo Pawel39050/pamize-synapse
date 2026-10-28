@@ -3,6 +3,7 @@
 import {useEffect,useMemo,useState} from "react";
 import type {HunterCategory,HunterDecision,HunterInput,HunterResult} from "../lib/talent-hunter";
 
+type AiBudget={configured:boolean;todayCount:number;monthCount:number;reservedTodayUsd:number;reservedMonthUsd:number;limitDayUsd:number;limitMonthUsd:number;reservationUsd:number;model:string};
 type HunterCandidate={id:string;sourceKey:string;sourceUrl:string;externalId:string;title:string;company:string;location:string;category:HunterCategory;excerpt:string;status:string;fetchedAt:string};
 type HunterScanRun={id:string;sourceKey:string;status:string;fetchedCount:number;matchedCount:number;insertedCount:number;errorCode:string|null;completedAt:string};
 const STORAGE="pamize.talent-hunter.v1.records";
@@ -38,6 +39,9 @@ export function TalentHunter(){
   const [scanRuns,setScanRuns]=useState<HunterScanRun[]>([]);
   const [scannerState,setScannerState]=useState<"checking"|"ready"|"migration"|"login"|"error">("checking");
   const [scanBusy,setScanBusy]=useState(false);
+  const [queueBusy,setQueueBusy]=useState(false);
+  const [budgetBusy,setBudgetBusy]=useState(false);
+  const [aiBudget,setAiBudget]=useState<AiBudget|null>(null);
 
   useEffect(()=>{
     try{
@@ -68,6 +72,8 @@ export function TalentHunter(){
       const x=await res.json() as {candidates:HunterCandidate[];runs:HunterScanRun[]};
       setCandidates(x.candidates);setScanRuns(x.runs);setScannerState("ready");
     }).catch(()=>setScannerState("error"));
+    fetch("/api/microsoft/talent-hunter/budget",{cache:"no-store"})
+      .then(async r=>{if(r.ok)setAiBudget(await r.json() as AiBudget);}).catch(()=>{});
   },[]);
   const choose=(r:HunterResult)=>{setSelected(r.id);setDecisionNote(r.decisionNote);setTab("analizy");};
   const save=(list:HunterResult[])=>{
@@ -111,6 +117,45 @@ export function TalentHunter(){
       setNotice("Tabele skanera utworzono w Neon. Możesz teraz uruchomić pierwszy skan KPRM.");
     }catch(e){setError(e instanceof Error?e.message:"Błąd konfiguracji skanera.");}
     finally{setScanBusy(false);}
+  }
+  async function setupAiBudget(){
+    setBudgetBusy(true);setError("");setNotice("");
+    try{
+      const r=await fetch("/api/microsoft/talent-hunter/budget",{
+        method:"POST",headers:{"Content-Type":"application/json"},body:"{}"
+      });
+      const x=await r.json() as AiBudget&{error?:string};
+      if(!r.ok)throw Error(x.error??"Nie udało się aktywować limitów AI.");
+      setAiBudget(x);setNotice("Włączono audyt AI i konserwatywne limity kosztów Synapse.");
+    }catch(e){setError(e instanceof Error?e.message:"Błąd konfiguracji limitów AI.");}
+    finally{setBudgetBusy(false);}
+  }
+  async function analyzeNext(){
+    setQueueBusy(true);setError("");setNotice("");
+    try{
+      const r=await fetch("/api/microsoft/talent-hunter/queue-analyze",{
+        method:"POST",headers:{"Content-Type":"application/json"},body:"{}"
+      });
+      const x=await r.json() as {error?:string;detail?:string;result?:HunterResult;usage?:{inputTokens:number;outputTokens:number}};
+      if(!r.ok||!x.result)throw Error(x.error??"Analiza automatyczna nie powiodła się.");
+      save([x.result,...records.filter(rec=>rec.id!==x.result!.id)]);
+      setSelected(x.result.id);setDecisionNote("");
+      const [updated,quota]=await Promise.all([
+        fetch("/api/microsoft/talent-hunter/candidates",{cache:"no-store"}),
+        fetch("/api/microsoft/talent-hunter/budget",{cache:"no-store"})
+      ]);
+      if(updated.ok){
+        const j=await updated.json() as {candidates:HunterCandidate[];runs:HunterScanRun[]};
+        setCandidates(j.candidates);setScanRuns(j.runs);
+      }
+      if(quota.ok)setAiBudget(await quota.json() as AiBudget);
+      setNotice("Analiza AI zakończona i zapisana w Neon: "+x.result.title+
+        " · potencjał "+x.result.potential+"%. Zweryfikuj wynik przed zatwierdzeniem.");
+      setTab("analizy");
+    }catch(e){setError(e instanceof Error?e.message:"Błąd analizy kolejki.");
+      const q=await fetch("/api/microsoft/talent-hunter/budget",{cache:"no-store"}).catch(()=>null);
+      if(q?.ok)setAiBudget(await q.json() as AiBudget);
+    }finally{setQueueBusy(false);}
   }
   async function scanNow(){
     setScanBusy(true);setError("");setNotice("");
@@ -178,7 +223,7 @@ export function TalentHunter(){
     <div className="th-top">
       <div className="th-brandline"><div className="th-mark">TH</div><div>
         <div className="th-overline">PAMIZE / DIGITAL WORKFORCE</div>
-        <h2>Talent Hunter <span>v1.1</span></h2>
+        <h2>Talent Hunter <span>v1.2</span></h2>
         <p>Od ogłoszenia o pracę do kwalifikowanego leada.</p>
       </div></div>
       <div className="th-service">
@@ -236,7 +281,19 @@ export function TalentHunter(){
         <div className="th-panel-heading"><div><span className="th-kicker">F01 · AUTOMATYCZNE POZYSKIWANIE</span><h3>Skaner ofert KPRM</h3><p className="th-muted">Oficjalne nabory służby cywilnej · źródło XML · zamówienia publiczne i zakupy</p></div>
           <button className="th-action" type="button" disabled={scanBusy||scannerState!=="ready"} onClick={()=>void scanNow()}>{scanBusy?"Skanuję źródło…":"Skanuj teraz"}</button>
         </div>
-        <div className="th-alert th-note"><strong>Kontrola kosztów:</strong> pobieranie i filtrowanie ogłoszeń nie uruchamia OpenAI. Analizę AI zlecasz oddzielnie po przeglądzie. Skan zaplanowany codziennie wymaga aktywacji przez administratora. Źródło: <a href="https://nabory.kprm.gov.pl/" target="_blank" rel="noreferrer noopener">KPRM · baza naborów</a>.</div>
+        <div className="th-alert th-note"><strong>Skaner:</strong> codzienny pobór ofert KPRM jest aktywny. Samo skanowanie nie uruchamia płatnych analiz AI. Każdą analizę z kolejki uruchamiasz osobno. Źródło: <a href="https://nabory.kprm.gov.pl/" target="_blank" rel="noreferrer noopener">KPRM · baza naborów</a>.</div>
+        <div className="th-alert th-note" style={{marginTop:12}}>
+          <strong>Kontrola AI i budżetu:</strong> {aiBudget?.configured?
+            "Aktywna: "+aiBudget.todayCount+" analiz dzisiaj, "+aiBudget.monthCount+" w tym miesiącu. Rezerwacja "+aiBudget.reservationUsd.toFixed(2)+
+            " USD / wywołanie, limit rezerwacji "+aiBudget.limitDayUsd.toFixed(2)+" USD / dzień i "+aiBudget.limitMonthUsd.toFixed(2)+" USD / miesiąc (UTC).":
+            "Rejestr limitów wymaga aktywacji przed płatnymi analizami."}
+          <p style={{margin:"8px 0"}}>Rezerwacje są konserwatywne i nie są rzeczywistymi fakturami OpenAI. Równolegle utrzymuj ograniczenie wydatków projektu w OpenAI.</p>
+          {!aiBudget?.configured&&<button className="th-action th-action-outline" type="button" disabled={budgetBusy||scannerState!=="ready"} onClick={()=>void setupAiBudget()}>{budgetBusy?"Aktywuję…":"Aktywuj limity i audyt AI"}</button>}
+        </div>
+        <div className="th-alert th-note" style={{marginTop:12}}>
+          <strong>Kontrolowana analiza z kolejki:</strong> Synapse wybierze jedno kompletne, nowe ogłoszenie KPRM i samodzielnie przeprowadzi analizę OpenAI, zapisze ją w Neon i umieści w rankingu. Nie wyśle wiadomości.
+          <div style={{marginTop:10}}><button className="th-action" disabled={queueBusy||scannerState!=="ready"||!aiBudget?.configured} onClick={()=>void analyzeNext()}>{queueBusy?"Analizuję ofertę…":"Analizuj automatycznie 1 ofertę →"}</button></div>
+        </div>
         {scannerState==="migration"&&<div className="th-alert th-note">Tabele skanera nie zostały jeszcze utworzone. <button className="th-action" type="button" disabled={scanBusy} style={{marginLeft:12}} onClick={()=>void setupScanner()}>{scanBusy?"Przygotowuję bazę…":"Aktywuj tabele skanera w Neon"}</button> <small>Bez usuwania dotychczasowych analiz.</small></div>}
         {scannerState==="login"&&<div className="th-alert">Wymagane połączenie konta Microsoft właściciela. <a href="/knowledge-live">Zaloguj się w Synapse Knowledge →</a></div>}
         {scannerState==="error"&&<div className="th-alert th-error">Nie udało się połączyć ze skanerem. Sprawdź logi Synapse.</div>}
@@ -286,10 +343,11 @@ export function TalentHunter(){
           {records.length?<div className="th-history">{records.map(x=><button key={x.id} onClick={()=>choose(x)}><span><strong>{x.company} · {x.title}</strong><small>{date(x.createdAt)} · {x.engine==="ai"?"AI":"Reguły"} · {x.decision}</small></span><b>{x.potential}% →</b></button>)}</div>:<p className="th-muted">Brak historii. Wykonaj pierwszą analizę w Radarze.</p>}
         </section>
         <aside className="th-panel"><span className="th-kicker">USTAWIENIA MVP</span><h3>Kontrola zakresu</h3>
-          <div className="th-fact"><span>Metodyka</span><strong>Talent Hunter v1.1</strong></div>
+          <div className="th-fact"><span>Metodyka</span><strong>Talent Hunter v1.2 · pilotaż AI z kolejki</strong></div>
           <div className="th-fact"><span>Obszary</span><strong>PZP · Zakupy i logistyka</strong></div>
           <div className="th-fact"><span>Próg kwalifikacji</span><strong>60%</strong></div>
-          <div className="th-fact"><span>Skaner KPRM</span><strong>{scannerState==="ready"?"Gotowy · manualny i cykliczny":"Wymaga konfiguracji"}</strong></div>
+          <div className="th-fact"><span>Skaner KPRM</span><strong>{scannerState==="ready"?"Aktywny · skan codzienny":"Wymaga konfiguracji"}</strong></div>
+          <div className="th-fact"><span>Kontrola kosztów AI</span><strong>{aiBudget?.configured?"Aktywna · limity prób":"Do aktywacji w Skanerze ofert"}</strong></div>
           <div className="th-fact"><span>CRM i magazyn danych</span><strong>{storageMode==="postgres"?"PostgreSQL połączony; CRM planowany":"PostgreSQL do aktywacji; CRM planowany"}</strong></div>
           <div className="th-fact"><span>Wysyłanie wiadomości</span><strong>Wyłączone</strong></div>
           <p className="th-footnote">API odczytu i zapisu wymaga sesji Microsoft właściciela. Docelowa obsługa klientów i ról wymaga dodatkowych uprawnień.</p>
