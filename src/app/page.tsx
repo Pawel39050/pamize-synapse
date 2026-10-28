@@ -2,7 +2,7 @@ import Link from "next/link";
 import { initialAgents, modules } from "../lib/catalog";
 
 const highlights = [
-  {title:"Universal Data Model",detail:"Kontrakty transakcji, źródeł danych i śladu dowodowego.",slug:"clients-data",tag:"Projekt danych"},
+  {title:"Knowledge & Academy",detail:"18 rzeczywistych dokumentów PAMIZE, sześć kategorii i szybkie otwieranie plików OneDrive.",slug:"skills-knowledge",tag:"Katalog aktywny"},
   {title:"Agent Registry",detail:"Wersjonowane definicje cyfrowych pracowników i umiejętności.",slug:"agent-registry",tag:"Katalog ról"},
   {title:"Agent Orchestrator",detail:"Demonstracja etapów delegowania i zatwierdzania zadań.",slug:"agent-orchestrator",tag:"Symulator"}
 ];
@@ -15,7 +15,7 @@ export default function DashboardPage() {
         <h1>Synapse. Inteligencja operacyjna przedsiębiorstwa.</h1>
         <p>Jedno miejsce do planowania, rozwijania i nadzorowania cyfrowych pracowników PAMIZE. W tej wersji dostępne są struktura 18 modułów oraz demonstracyjne widoki fundamentów systemu.</p>
         <div className="hero-actions">
-          <Link className="btn primary" href="/modules/agent-registry">Przegląd agentów ↗</Link>
+          <Link className="btn primary" href="/modules/skills-knowledge">Otwórz bibliotekę wiedzy ↗</Link>
           <Link className="btn secondary" href="/modules/agent-orchestrator">Zobacz workflow</Link>
         </div>
       </section>
