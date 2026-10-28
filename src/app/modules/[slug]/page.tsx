@@ -4,6 +4,7 @@ import { modules, initialAgents } from "../../../lib/catalog";
 import { AgentCatalogue } from "../../../components/agent-catalogue";
 import { WorkflowSimulator } from "../../../components/workflow-simulator";
 import { KnowledgeLibrary } from "../../../components/knowledge-library";
+import { TalentHunter } from "../../../components/talent-hunter";
 
 export function generateStaticParams() {
   return modules.map((module) => ({slug:module.slug}));
@@ -49,6 +50,7 @@ export default async function ModulePage({params}: PageProps) {
        slug==="agent-orchestrator" ? <WorkflowSimulator/> :
        slug==="clients-data" ? <DataModelPreview/> :
        slug==="skills-knowledge" ? <KnowledgeLibrary/> :
+       slug==="talent-hunter" ? <TalentHunter/> :
        <section className="panel placeholder">
          <span className="placeholder-icon">◇</span>
          <h2>Moduł przygotowany do implementacji</h2>
