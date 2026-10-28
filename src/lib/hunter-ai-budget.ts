@@ -1,5 +1,6 @@
 import "server-only";
 import {neon} from "@neondatabase/serverless";
+import {initializeAiApprovals,approvalsReady} from "./hunter-ai-approval";
 
 const TENANT="pamize-internal";
 const DAY_CENTS=15; // $0.15 / UTC day
@@ -41,6 +42,7 @@ export async function initializeAiBudget(){
   )`;
   await sql`CREATE INDEX IF NOT EXISTS ix_hunter_usage_tenant_date
     ON synapse_hunter_ai_usage(tenant_id,created_at DESC)`;
+  await initializeAiApprovals();
 }
 export async function readAiBudget():Promise<AiBudget>{
   const sql=db(),p=period();
@@ -48,7 +50,8 @@ export async function readAiBudget():Promise<AiBudget>{
     const rows=await sql`SELECT day_key,month_key,day_reserved_cents,month_reserved_cents,day_count,month_count
        FROM synapse_hunter_ai_budget WHERE tenant_id=${TENANT}`;
     const row=rows[0];
-    return {configured:true,todayCount:row?.day_key===p.day?Number(row.day_count):0,
+    const ready=await approvalsReady();
+    return {configured:ready,todayCount:row?.day_key===p.day?Number(row.day_count):0,
       monthCount:row?.month_key===p.month?Number(row.month_count):0,
       reservedTodayUsd:(row?.day_key===p.day?Number(row.day_reserved_cents):0)/100,
       reservedMonthUsd:(row?.month_key===p.month?Number(row.month_reserved_cents):0)/100,
