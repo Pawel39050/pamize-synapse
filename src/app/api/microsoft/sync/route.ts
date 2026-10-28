@@ -1,5 +1,5 @@
 import {NextRequest,NextResponse} from "next/server";
-import {graphChildren,isAllowedProfile,isValidSession,makeSession,markPrivate,microsoftConfigured,microsoftGraph,microsoftProfile,refreshAccessToken,seal,secureCookie,unseal,clearCookie,SESSION_COOKIE,type GraphItem,type MicrosoftSession} from "../../../../lib/microsoft-graph";
+import {graphChildren,MicrosoftIntegrationError,isAllowedProfile,isValidSession,makeSession,markPrivate,microsoftConfigured,microsoftGraph,microsoftProfile,refreshAccessToken,seal,secureCookie,unseal,clearCookie,SESSION_COOKIE,type GraphItem,type MicrosoftSession} from "../../../../lib/microsoft-graph";
 import {knowledgeCategories,knowledgeDocuments,type KnowledgeDocument,type KnowledgeFileKind,type KnowledgeCategory} from "../../../../lib/knowledge";
 
 export const runtime="nodejs";
@@ -13,7 +13,9 @@ const FOLDERS:{name:string;category:KnowledgeCategory}[]=[
   {name:"05 – Manuale techniczne i bezpieczeństwo",category:"technical"},
   {name:"06 – Akademia i szkolenia",category:"academy"}
 ];
-const ROOT="/v1.0/me/drive/root:/PAMIZE%20Synapse:/children?$select=id,name,folder,file,webUrl&$top=100";
+// Discover the root folder by its Graph driveItem ID rather than path-based addressing.
+// This avoids differences in OneDrive Personal path handling and encoding.
+const ROOT="/v1.0/me/drive/root/children?$select=id,name,folder,file,webUrl&$top=100";
 function kindOf(name:string):KnowledgeFileKind|null{
   const ext=name.split(".").pop()?.toUpperCase();
   return ext==="DOCX"||ext==="PPTX"||ext==="ZIP"||ext==="MD"||ext==="MP4"?ext:null;
@@ -32,20 +34,28 @@ export async function GET(request:NextRequest){
   if(!microsoftConfigured()) return markPrivate(NextResponse.json({error:"Administrator nie skonfigurował aplikacji Microsoft OAuth."},{status:503}));
   const session=unseal<MicrosoftSession>(request.cookies.get(SESSION_COOKIE)?.value);
   if(!isValidSession(session))return markPrivate(NextResponse.json({error:"Microsoft nie jest połączony. Zaloguj się na konto właściciela OneDrive."},{status:401}));
+  let stage="refresh_token";
   try{
     const tokens=await refreshAccessToken(session.refreshToken);
+    stage="verify_identity";
     const profile=await microsoftProfile(tokens.access_token!);
     if (!isAllowedProfile(profile) || profile.id!==session.id) {
       const denied=NextResponse.json({error:"Zmieniono konto Microsoft. Dostęp zablokowany."},{status:403});
       clearCookie(denied,SESSION_COOKIE);
       return markPrivate(denied);
     }
-    const roots=await graphChildren(tokens.access_token!,ROOT);
+    stage="list_drive_root";
+    const driveRootItems=await graphChildren(tokens.access_token!,ROOT);
+    const library=driveRootItems.find((item)=>item.folder && item.name.normalize("NFC").trim()==="PAMIZE Synapse");
+    if(!library)throw new MicrosoftIntegrationError("graph_folder",404,"pamize_root_missing");
+    stage="list_library_folders";
+    const roots=await graphChildren(tokens.access_token!,folderPath(library.id));
     const all:KnowledgeDocument[]=[];
     const warnings:string[]=[];
     for (const folder of FOLDERS){
-      const root=roots.find((item)=>item.folder && item.name===folder.name);
-      if(!root){warnings.push(`Brak folderu: ${folder.name}`);continue;}
+      const root=roots.find((item)=>item.folder && item.name.normalize("NFC").trim()===folder.name);
+      if(!root){warnings.push("Brak folderu: "+folder.name);continue;}
+      stage="list_folder_"+folder.category;
       const items:GraphItem[]=await graphChildren(tokens.access_token!,folderPath(root.id));
       for(const item of items) {
         if(!item.file)continue;
@@ -67,9 +77,19 @@ export async function GET(request:NextRequest){
       documents:all,warnings,categoryCount:knowledgeCategories.length
     });
     // Refresh token stays in encrypted HttpOnly cookie; no Graph access token reaches the client.
-    secureCookie(response,SESSION_COOKIE,seal(makeSession(profile,tokens.refresh_token!)),30*24*60*60);
+    stage="save_session";
+    // OAuth refresh responses can omit a replacement refresh token; retain the still-valid current token.
+    secureCookie(response,SESSION_COOKIE,seal(makeSession(profile,tokens.refresh_token??session.refreshToken)),30*24*60*60);
     return markPrivate(response);
-  }catch {
-    return markPrivate(NextResponse.json({error:"Nie udało się pobrać katalogu z OneDrive. Sprawdź połączenie Microsoft i spróbuj ponownie. Jeśli zgoda wygasła, rozłącz i połącz konto."},{status:502}));
+  }catch (err) {
+    const info=err instanceof MicrosoftIntegrationError?err:null;
+    const diagnostic={stage,httpStatus:info?.status??null,code:info?.code??"unexpected_failure"};
+    // Deliberately never log OAuth tokens, account email, Graph URLs or file details.
+    console.error("[Synapse OneDrive sync]",diagnostic);
+    const detail=info?" (etap: "+stage+", HTTP "+info.status+", kod: "+info.code+")":" (etap: "+stage+")";
+    return markPrivate(NextResponse.json({
+      error:"Nie udało się zsynchronizować OneDrive"+detail+". Twoje pliki pozostają bez zmian.",
+      diagnostic
+    },{status:502}));
   }
 }
