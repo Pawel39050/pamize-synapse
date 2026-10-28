@@ -153,7 +153,10 @@ export async function graphChildren(accessToken:string,path:string):Promise<Grap
   return all;
 }
 export function makeSession(profile:{id:string;mail?:string|null;userPrincipalName?:string|null},refreshToken:string):MicrosoftSession {
-  return {id:profile.id,email:(profile.mail||profile.userPrincipalName||"").trim(),refreshToken,createdAt:Date.now()};
+  const expected=(process.env.MICROSOFT_ALLOWED_EMAIL||"").trim().toLocaleLowerCase("en-US");
+  const confirmed=[profile.mail,profile.userPrincipalName].find(candidate=>candidate?.trim().toLocaleLowerCase("en-US")===expected);
+  if (!confirmed) throw new Error("Account identity mismatch.");
+  return {id:profile.id,email:confirmed.trim(),refreshToken,createdAt:Date.now()};
 }
 export function isValidSession(session:MicrosoftSession|null):session is MicrosoftSession {
   return Boolean(session && typeof session.refreshToken==="string" && session.refreshToken.length>10 && typeof session.email==="string" && session.email.toLocaleLowerCase("en-US")===(process.env.MICROSOFT_ALLOWED_EMAIL||"").toLocaleLowerCase("en-US") && session.createdAt>Date.now()-SESSION_SECONDS*1000);
