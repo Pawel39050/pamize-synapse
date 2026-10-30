@@ -12,7 +12,7 @@ export const knowledgeCategories = [
 ] as const;
 
 export type KnowledgeCategory = (typeof knowledgeCategories)[number]["id"];
-export type KnowledgeFileKind = "DOCX" | "PPTX" | "ZIP" | "MD" | "MP4";
+export type KnowledgeFileKind = "DOCX" | "PPTX" | "PDF" | "TXT" | "ZIP" | "MD" | "MP4";
 export type KnowledgeDocument = {
   id: string;
   name: string;
