@@ -43,7 +43,7 @@ export default async function ModulePage({params}: PageProps) {
       <div className="breadcrumb"><Link href="/">Panel główny</Link><span> / </span><span>{module.group}</span></div>
       <section className="page-intro">
         <span className="eyebrow">MODUŁ SYNAPSE</span>
-        <div className="page-title-row"><h1>{module.title}</h1><span className="pill">{slug==="skills-knowledge" ? "KATALOG DOKUMENTÓW" : module.status==="demonstration" ? "WIDOK DEMO" : "PLANOWANY"}</span></div>
+        <div className="page-title-row"><h1>{module.title}</h1><span className="pill">{slug==="skills-knowledge" ? "BAZA WIEDZY + AGENT RAG" : module.status==="demonstration" ? "WIDOK DEMO" : "PLANOWANY"}</span></div>
         <p>{module.description}</p>
       </section>
       {slug==="agent-registry" ? <AgentCatalogue/> :

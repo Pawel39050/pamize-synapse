@@ -1,11 +1,12 @@
 "use client";
 
 import {useCallback, useEffect, useMemo, useState} from "react";
+import {KnowledgeAgent} from './knowledge-agent';
 import {knowledgeCategories, knowledgeDocuments, type KnowledgeDocument, type KnowledgeFileKind} from "../lib/knowledge";
 
 type Status = {configured:boolean; connected:boolean; account:string|null};
 type SyncResponse = {documents?:KnowledgeDocument[];synchronizedAt?:string;warnings?:string[];error?:string};
-const kinds:Array<KnowledgeFileKind|"all">=["all","DOCX","PPTX","ZIP","MD","MP4"];
+const kinds:Array<KnowledgeFileKind|"all">=["all","DOCX","PPTX","PDF","TXT","ZIP","MD","MP4"];
 
 function searchable(text:string) {
   return text.toLocaleLowerCase("pl-PL").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/ł/g,"l");
@@ -76,6 +77,7 @@ export function KnowledgeLibrary(){
   }
 
   return <div className="knowledge-root">
+    <KnowledgeAgent/>
     <section className="panel microsoft-sync-panel" aria-label="Synchronizacja z Microsoft">
       <div className="microsoft-sync-copy">
         <span className="eyebrow">MICROSOFT GRAPH · TYLKO ODCZYT</span>
@@ -105,7 +107,7 @@ export function KnowledgeLibrary(){
       <div><span>Magazyn</span><strong className="knowledge-source">OneDrive</strong><small>Konto osobiste Microsoft</small></div>
     </section>
 
-    <div className="notice compact"><strong>Bezpieczeństwo:</strong> do aplikacji trafiają wyłącznie nazwy, kategorie i odnośniki do dokumentów. Zawartość otwierana jest w Microsoft i podlega jego uprawnieniom. {liveDocuments!==null?"Widzisz aktualny odczyt Microsoft Graph (bez wyszukiwania pełnotekstowego i bez RAG).":"Do czasu autoryzacji Microsoft to tylko ręcznie zweryfikowany katalog — nowych plików jeszcze nie widać."}</div>
+    <div className="notice compact"><strong>Źródła i dostęp:</strong> katalog pobiera nazwy, kategorie i odnośniki. Przycisk pobrania bazy odczytuje również treść dokumentów z sześciu folderów PAMIZE Synapse, po sprawdzeniu konta właściciela. Agent RAG przetwarza lokalną kopię na Twoim komputerze. {liveDocuments!==null?"Katalog pochodzi z aktualnego odczytu Microsoft Graph.":"Poniżej widoczny jest zapisany katalog; aktualny odczyt wymaga połączenia Microsoft."}</div>
 
     <section className="panel knowledge-filter-panel">
       <div className="panel-top"><h2>Przeglądaj firmową wiedzę</h2><span className="pill">{documents.length} PLIKÓW</span></div>

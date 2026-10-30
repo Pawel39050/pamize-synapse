@@ -18,7 +18,7 @@ const FOLDERS:{name:string;category:KnowledgeCategory}[]=[
 const ROOT="/v1.0/me/drive/root/children?$select=id,name,folder,file,webUrl&$top=100";
 function kindOf(name:string):KnowledgeFileKind|null{
   const ext=name.split(".").pop()?.toUpperCase();
-  return ext==="DOCX"||ext==="PPTX"||ext==="ZIP"||ext==="MD"||ext==="MP4"?ext:null;
+  return ext==="DOCX"||ext==="PPTX"||ext==="PDF"||ext==="TXT"||ext==="ZIP"||ext==="MD"||ext==="MP4"?ext:null;
 }
 function safeFileUrl(input:string|undefined):string|null {
   if(!input)return null;
