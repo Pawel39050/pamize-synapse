@@ -154,6 +154,6 @@ export function KnowledgeLibrary(){
       </div>
     </section>
 
-    <section className="knowledge-next"><div><span className="eyebrow">KOLEJNY ETAP</span><h2>Wiedza dostępna dla cyfrowych pracowników</h2><p>Synchronizacja listy dokumentów to pierwszy etap. Wyszukiwanie w treści, RAG, wersjonowanie, izolacja klientów i indywidualne uprawnienia agentów wymagają osobnej implementacji.</p></div><span className="pill">GRAPH · READ ONLY</span></section>
+    <section className="knowledge-next"><div><span className="eyebrow">KOLEJNY ETAP</span><h2>Wiedza dostępna dla cyfrowych pracowników</h2><p>Lokalny agent wiedzy działa na kopii dokumentów aktualizowanej przez import. Kolejne etapy to automatyczna synchronizacja treści, zatwierdzanie wersji procedur oraz indywidualne uprawnienia agentów i izolacja klientów.</p></div><span className="pill">GRAPH · READ ONLY</span></section>
   </div>;
 }

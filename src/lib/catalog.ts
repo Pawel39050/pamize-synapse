@@ -25,7 +25,7 @@ export const modules: SynapseModule[] = [
 
   {slug:"agent-registry",title:"Agent Registry",group:"Digital Workforce",description:"Rejestr ról cyfrowych pracowników, ich kompetencji i uprawnień.",outcomes:["Definicje agentów","Skills i narzędzia","Poziomy autonomii"],status:"demonstration"},
   {slug:"agent-orchestrator",title:"Agent Orchestrator",group:"Digital Workforce",description:"Delegowanie zadań i koordynacja współpracujących agentów.",outcomes:["Workflow","Zatwierdzenia","Ślad audytowy"],status:"demonstration"},
-  {slug:"skills-knowledge",title:"Knowledge & Academy",group:"Digital Workforce",description:"Katalog 18 dokumentów PAMIZE z OneDrive: wyszukiwanie metadanych, kategorie i otwieranie materiałów bez ich publicznego kopiowania.",outcomes:["Wyszukiwarka dokumentów","Kategorie wiedzy","Bezpieczne linki OneDrive"],status:"demonstration"},
+  {slug:"skills-knowledge",title:"Knowledge & Academy",group:"Digital Workforce",description:"Firmowa biblioteka OneDrive i lokalny agent RAG: pytania do procedur, odpowiedzi ze źródłami i aktualizacja bazy wiedzy.",outcomes:["Wyszukiwarka dokumentów","Kategorie wiedzy","Bezpieczne linki OneDrive"],status:"demonstration"},
   {slug:"development-lab",title:"Development Lab",group:"Digital Workforce",description:"Projektowanie, testowanie i ewaluacja nowych agentów.",outcomes:["Eksperymenty","Testy jakości","Wersje"],status:"planned"},
 
   {slug:"runtime",title:"Synapse Runtime",group:"Governance",description:"Monitorowanie wykonania agentów i ich kosztów.",outcomes:["Wywołania modeli","Błędy","Budżety"],status:"planned"},
