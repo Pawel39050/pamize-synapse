@@ -1,0 +1,11 @@
+name: Compliance Guardian scheduled preview monitor
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  default-branch-safety:
+    if: github.ref != 'refs/heads/feature/compliance-guardian'
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "No monitoring on default branch. Select feature/compliance-guardian."
