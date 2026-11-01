@@ -4,14 +4,15 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "node scripts/compliance-preview-build-check.mjs && npm run test:compliance:provisions && npm run test:compliance:articles && next build",
+    "build": "node scripts/compliance-preview-build-check.mjs && npm run test:compliance:provisions && npm run test:compliance:articles && npm run test:compliance:eurlex && next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "test:compliance": "node --test tests/compliance-versioning.test.mjs",
     "test:compliance:one-time": "node scripts/compliance-one-time-source-monitor.mjs",
     "test:compliance:isolation": "node scripts/compliance-preview-isolation-check.mjs",
     "test:compliance:provisions": "node --experimental-strip-types --test tests/legal-provision-diff.test.mjs",
-    "test:compliance:articles": "node --experimental-strip-types --test tests/legal-article-extractor.test.mjs"
+    "test:compliance:articles": "node --experimental-strip-types --test tests/legal-article-extractor.test.mjs",
+    "test:compliance:eurlex": "node --experimental-strip-types --test tests/eurlex-html-extractor.test.mjs"
   },
   "dependencies": {
     "next": "^15.5.0",
