@@ -15,8 +15,17 @@ function writableDatabaseUrl(): string {
       process.env.COMPLIANCE_ISOLATED_DB_CONFIRMED !== "true") {
     throw new Error("Compliance database storage is disabled pending isolation review");
   }
+  if (process.env.VERCEL_GIT_COMMIT_REF !== "feature/compliance-guardian") {
+    throw new Error("Compliance writes require the dedicated Git preview branch");
+  }
   const url = process.env.COMPLIANCE_DATABASE_URL;
-  if (!url) throw new Error("COMPLIANCE_DATABASE_URL is not configured");
+  const expectedHost = process.env.COMPLIANCE_EXPECTED_DB_HOST;
+  if (!url || !expectedHost) throw new Error("Compliance Neon connection or expected host is missing");
+  const parsed = new URL(url);
+  if (!["postgres:", "postgresql:"].includes(parsed.protocol) ||
+      !parsed.hostname.endsWith(".neon.tech") || parsed.hostname !== expectedHost) {
+    throw new Error("Compliance Neon connection does not match approved preview host");
+  }
   return url;
 }
 
