@@ -1,0 +1,40 @@
+name: Compliance Guardian scheduled preview monitor
+on:
+  workflow_dispatch:
+  # Schedule intentionally not enabled here: GitHub runs scheduled workflows
+  # only from the default branch, NOT from feature/compliance-guardian.
+permissions:
+  contents: read
+concurrency:
+  group: compliance-preview-monitor
+  cancel-in-progress: false
+jobs:
+  preview-monitor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    environment: compliance-preview
+    steps:
+      - name: Check prerequisites and monitor isolated Preview
+        env:
+          PREVIEW_MONITOR_URL: ${{ secrets.PREVIEW_MONITOR_URL }}
+          PREVIEW_MONITOR_TOKEN: ${{ secrets.PREVIEW_MONITOR_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -z "${PREVIEW_MONITOR_URL:-}" || -z "${PREVIEW_MONITOR_TOKEN:-}" ]]; then
+            echo "::error::Preview URL or token missing from GitHub environment secrets"
+            exit 1
+          fi
+          if [[ "$PREVIEW_MONITOR_URL" != https://*.vercel.app/api/compliance/monitor ]]; then
+            echo "::error::Target must be a Vercel Preview monitoring endpoint"
+            exit 1
+          fi
+          status=$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' \
+            --max-time 35 --request POST \
+            --header "x-compliance-diagnostic-token: $PREVIEW_MONITOR_TOKEN" \
+            "$PREVIEW_MONITOR_URL")
+          if [[ "$status" != "200" ]]; then
+            echo "::error::Preview monitor failed with HTTP $status"
+            exit 1
+          fi
+          echo "Preview monitor returned HTTP 200 (source outcome available in Vercel logs)"
