@@ -22,10 +22,22 @@ export async function fetchOfficialCellarAct(sourceId:string,language:"EN"|"PL"=
   if(!celex)return {ok:false,sourceId,reason:"Not an allowlisted EU act"};
   const url=`https://publications.europa.eu/resource/celex/${celex}`;
   try{
-    const response=await fetch(url,{
+    let currentUrl=url;
+    let response:Response | undefined;
+    for(let hop=0;hop<4;hop++){
+      response=await fetch(currentUrl,{
       redirect:"manual",cache:"no-store",signal:AbortSignal.timeout(15000),
-      headers:{Accept:"application/xhtml+xml", "Accept-Language":language==="PL"?"pl":"en"}
-    });
+      headers:{Accept:"application/xhtml+xml", "Accept-Language":language==="PL"?"pol":"eng"}
+      });
+      if(![301,302,303,307,308].includes(response.status))break;
+      const location=response.headers.get("location");
+      if(!location)return {ok:false,sourceId,reason:"Missing CELLAR redirect target"};
+      const next=new URL(location,currentUrl);
+      if(next.protocol!=="https:"||next.hostname!=="publications.europa.eu"||next.username||next.password)
+        return {ok:false,sourceId,reason:"CELLAR redirect rejected by host policy"};
+      currentUrl=next.toString();
+    }
+    if(!response)return {ok:false,sourceId,reason:"CELLAR response missing"};
     if(!response.ok||!response.body)
       return {ok:false,sourceId,reason:`Cellar HTTP ${response.status} (redirects not followed)`};
     const contentType=(response.headers.get("content-type")??"").split(";")[0].trim().toLowerCase();
