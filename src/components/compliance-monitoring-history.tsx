@@ -2,11 +2,13 @@ import "server-only";
 import { legalSources } from "../lib/compliance/regulatory-sources";
 import { readComplianceHistory } from "../lib/compliance/history";
 import { listLegalActVersions } from "../lib/compliance/legal-version-store";
+import { readGdprCorrigendumReport } from "../lib/compliance/corrigendum-report-store";
 
 export async function ComplianceMonitoringHistory() {
   const history = await readComplianceHistory();
   const monitored = new Set(history.rows.map(row=>row.sourceId));
   const legalVersions = await listLegalActVersions("32016R0679").catch(() => []);
+  const corrigendum = await readGdprCorrigendumReport();
   return (
     <section className="section-block panel">
       <div className="panel-top">
@@ -22,7 +24,24 @@ export async function ComplianceMonitoringHistory() {
           · SHA-256: {v.documentSha256.slice(0,16)}…
         </p>)}
       </div>
-      <p className="muted">Dane pochodzą wyłącznie z izolowanej bazy testowej Neon. Zapisany odcisk strony internetowej nie jest potwierdzeniem zmiany prawa. Brak alertów prawnych i brak harmonogramu.</p>
+      <div className="notice compact">
+        <h3>Raport sprostowania RODO — 23 maja 2018 (język EN)</h3>
+        <p>CELEX: {corrigendum.correctionCelex} · Zapisane porównania: {corrigendum.changes.length} · Status: wymaga weryfikacji prawnej.</p>
+        <p><a href={corrigendum.officialUrl} target="_blank" rel="noopener noreferrer">Dokument urzędowy EUR-Lex</a></p>
+        {corrigendum.status === "unavailable" ? <p role="status">{corrigendum.reason}</p> : (
+          <div className="agent-list">
+            {corrigendum.changes.map(change => (
+              <article className="model-card" key={change.section}>
+                <h4>{change.section}</h4>
+                <p><strong>Przed:</strong> {change.previous}</p>
+                <p><strong>Po:</strong> {change.corrected}</p>
+                <small>Status: zapis transkrypcji — wymagana kontrola źródła i zatwierdzenie przez prawnika.</small>
+              </article>
+            ))}
+          </div>
+        )}
+      </div>
+      <p className="muted">Dane pochodzą wyłącznie z izolowanej bazy testowej Neon. Zapisany odcisk strony internetowej nie jest potwierdzeniem zmiany prawa. Brak automatycznego rozstrzygania skutków prawnych.</p>
       {history.status === "unavailable" ? (
         <div className="notice compact" role="status">{history.reason}. W produkcji nie odczytujemy testowej bazy.</div>
       ) : (
@@ -30,7 +49,7 @@ export async function ComplianceMonitoringHistory() {
           <div className="kpi-grid">
             <div className="kpi"><span>Zapisane stany źródeł</span><strong>{history.rows.length}</strong><small>Ostatnie 50 rekordów, bez duplikowania identycznych odcisków</small></div>
             <div className="kpi"><span>Źródła z historią</span><strong>{monitored.size}</strong><small>Z {legalSources.length} źródeł w rejestrze</small></div>
-            <div className="kpi"><span>Aktywne harmonogramy</span><strong>0</strong><small>Monitoring automatyczny wyłączony</small></div>
+            <div className="kpi"><span>Monitoring UODO</span><strong>06:00</strong><small>Codzienny harmonogram działa poza tym panelem; zapisy stanów źródeł są odrębne od zmian prawa</small></div>
             <div className="kpi"><span>Zweryfikowane zmiany prawa</span><strong>0</strong><small>Brak zatwierdzonych analiz prawnych</small></div>
           </div>
           {history.rows.length === 0 ? <p className="muted">Brak zapisanych stanów monitoringu.</p> :
