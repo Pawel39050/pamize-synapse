@@ -6,6 +6,9 @@ import { WorkflowSimulator } from "../../../components/workflow-simulator";
 import { KnowledgeLibrary } from "../../../components/knowledge-library";
 import { TalentHunter } from "../../../components/talent-hunter";
 import { ComplianceGuardian } from "../../../components/compliance-guardian";
+import { ComplianceMonitoringHistory } from "../../../components/compliance-monitoring-history";
+
+export const dynamic = "force-dynamic";
 
 export function generateStaticParams() {
   return modules.map((module) => ({slug:module.slug}));
@@ -52,7 +55,7 @@ export default async function ModulePage({params}: PageProps) {
        slug==="clients-data" ? <DataModelPreview/> :
        slug==="skills-knowledge" ? <KnowledgeLibrary/> :
        slug==="talent-hunter" ? <TalentHunter/> :
-       slug==="compliance-guardian" ? <ComplianceGuardian/> :
+       slug==="compliance-guardian" ? <><ComplianceGuardian/><ComplianceMonitoringHistory/></> :
        <section className="panel placeholder">
          <span className="placeholder-icon">◇</span>
          <h2>Moduł przygotowany do implementacji</h2>
