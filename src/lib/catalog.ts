@@ -28,6 +28,7 @@ export const modules: SynapseModule[] = [
   {slug:"skills-knowledge",title:"Knowledge & Academy",group:"Digital Workforce",description:"Firmowa biblioteka OneDrive i lokalny agent RAG: pytania do procedur, odpowiedzi ze źródłami i aktualizacja bazy wiedzy.",outcomes:["Wyszukiwarka dokumentów","Kategorie wiedzy","Bezpieczne linki OneDrive"],status:"demonstration"},
   {slug:"development-lab",title:"Development Lab",group:"Digital Workforce",description:"Projektowanie, testowanie i ewaluacja nowych agentów.",outcomes:["Eksperymenty","Testy jakości","Wersje"],status:"planned"},
 
+  {slug:"compliance-guardian",title:"PAMIZE Compliance Guardian",group:"Governance",description:"Centralny nadzór regulacyjny nad cyfrowymi pracownikami: monitoring prawa, oceny AI Act i RODO oraz Regulatory Impact Analysis.",outcomes:["AI Compliance Card","AI Act i RODO Assessment","Monitoring zmian regulacyjnych","Regulatory Impact Analysis","Rejestr ryzyk i działań"],status:"planned"},
   {slug:"runtime",title:"Synapse Runtime",group:"Governance",description:"Monitorowanie wykonania agentów i ich kosztów.",outcomes:["Wywołania modeli","Błędy","Budżety"],status:"planned"},
   {slug:"control",title:"Control & Security",group:"Governance",description:"Kontrola dostępu, zgód, izolacja klientów i bezpieczeństwo.",outcomes:["Role i polityki","Audit log","Zatwierdzenia"],status:"planned"},
   {slug:"performance",title:"Performance & Benefits",group:"Governance",description:"Weryfikacja KPI oraz faktycznie uzyskanych korzyści finansowych.",outcomes:["KPI","Rejestr korzyści","Kontrola CFO"],status:"planned"},
@@ -35,6 +36,7 @@ export const modules: SynapseModule[] = [
 ];
 
 export const initialAgents: AgentDefinition[] = [
+  {key:"AG-GOV-001",version:"0.1.0",name:"PAMIZE Compliance Guardian",family:"Governance",purpose:"Monitorowanie regulacji, ocena zgodności procedur agentów i analiza wpływu zmian prawa na Synapse.",skillKeys:["regulatory-intelligence","ai-act-assessment","gdpr-assessment","regulatory-impact-analysis","compliance-card-generator"],toolKeys:[],lifecycle:"planned"},
   {key:"AG-CORE-001",version:"0.1.0",name:"Enterprise Diagnostic Coordinator",family:"Strategic",purpose:"Delegowanie diagnoz i konsolidacja ustaleń.",skillKeys:["coordinate-diagnosis","compare-findings"],toolKeys:["tasks.read","findings.read"],lifecycle:"planned"},
   {key:"AG-ORG-001",version:"0.1.0",name:"Discovery Agent",family:"Organization",purpose:"Wywiad adaptacyjny i diagnoza organizacyjna.",skillKeys:["run-survey","generate-hypotheses"],toolKeys:["surveys.read"],lifecycle:"planned"},
   {key:"AG-FIN-002",version:"0.1.0",name:"Profitability Agent",family:"Finance",purpose:"Rentowność klientów, produktów i transakcji.",skillKeys:["analyze-contribution-margin"],toolKeys:["profitability.calculate"],lifecycle:"planned"},
