@@ -61,6 +61,16 @@ export function validateLegalDocumentEvidence(
   return {ok:true, status:"awaiting-document-review"};
 }
 
+/** Source evidence may only advance after explicit source/version checking. */
+export function confirmDocumentProvenance(
+  evidence: LegalDocumentEvidence,
+  allowedOfficialHosts: readonly string[]
+): LegalDocumentEvidence {
+  const check = validateLegalDocumentEvidence(evidence, allowedOfficialHosts);
+  if (!check.ok) throw new Error(check.reason);
+  return {...evidence, reviewStatus:"awaiting-document-review"};
+}
+
 /** Explicit human attestation is required to assert a change of law. */
 export function approveLegalReview(
   evidence: LegalDocumentEvidence,
