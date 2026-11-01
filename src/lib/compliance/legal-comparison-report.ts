@@ -1,4 +1,4 @@
-import {compareLegalProvisions,type LegalProvision,type ProvisionChange} from "./legal-provision-diff";
+import {compareLegalProvisions,type LegalProvision,type ProvisionChange} from "./legal-provision-diff.ts";
 
 export type LegalComparisonReport = {
   sourceId:string;
