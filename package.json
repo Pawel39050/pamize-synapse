@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "node scripts/compliance-preview-build-check.mjs && npm run test:compliance:provisions && npm run test:compliance:articles && npm run test:compliance:eurlex && next build",
+    "build": "node scripts/compliance-preview-build-check.mjs && npm run test:compliance:provisions && npm run test:compliance:articles && npm run test:compliance:eurlex && node scripts/compliance-cellar-live-probe.mjs && next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "test:compliance": "node --test tests/compliance-versioning.test.mjs",
