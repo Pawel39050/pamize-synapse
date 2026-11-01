@@ -33,6 +33,7 @@ export async function fetchOfficialCellarAct(sourceId:string,language:"EN"|"PL"=
       const location=response.headers.get("location");
       if(!location)return {ok:false,sourceId,reason:"Missing CELLAR redirect target"};
       const next=new URL(location,currentUrl);
+      if(next.protocol==="http:"&&next.hostname==="publications.europa.eu")next.protocol="https:";
       if(next.protocol!=="https:"||next.hostname!=="publications.europa.eu"||next.username||next.password)
         return {ok:false,sourceId,reason:"CELLAR redirect rejected by host policy"};
       currentUrl=next.toString();
