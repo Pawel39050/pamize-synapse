@@ -1,3 +1,4 @@
+import {extractEurLexHtmlArticles} from "../src/lib/compliance/eurlex-html-extractor.ts";
 // One-time Preview-only probe. Never prints document contents or secrets.
 if(process.env.VERCEL_ENV==="preview"&&process.env.VERCEL_GIT_COMMIT_REF==="feature/compliance-guardian"){
   const url="https://publications.europa.eu/resource/celex/32016R0679?language=eng";
@@ -21,6 +22,8 @@ if(process.env.VERCEL_ENV==="preview"&&process.env.VERCEL_GIT_COMMIT_REF==="feat
       const body=await res.text();
       const challenge=/verify that you.re not a robot|enable javascript and then reload/i.test(body);
       const markers=(body.match(/\bti-art\b/g)||[]).length;
+      const parsed=challenge?{ok:false,reason:"challenge"}:extractEurLexHtmlArticles(body);
+      console.log("CELLAR article extraction:",parsed.ok?"PASS":"REVIEW_REQUIRED",parsed.ok?parsed.articles.length:parsed.reason);
       console.log("CELLAR live retrieval:",!challenge&&markers>0?"DOCUMENT_STRUCTURE_FOUND":"UNVERIFIED_FORMAT",
         "article-markers",markers,"bytes",Buffer.byteLength(body));
     }
