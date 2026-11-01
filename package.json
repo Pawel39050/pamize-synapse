@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "node scripts/compliance-preview-build-check.mjs && npm run test:compliance:provisions && npm run test:compliance:articles && npm run test:compliance:eurlex && npm run test:compliance:report && npm run test:compliance:versions && next build",
+    "build": "node scripts/compliance-preview-build-check.mjs && npm run test:compliance:provisions && npm run test:compliance:articles && npm run test:compliance:eurlex && npm run test:compliance:report && npm run test:compliance:versions && npm run test:compliance:gdpr-reference && next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "test:compliance": "node --test tests/compliance-versioning.test.mjs",
@@ -16,7 +16,8 @@
     "test:compliance:report": "node --experimental-strip-types --test tests/legal-comparison-report.test.mjs",
     "test:compliance:cellar-live": "node scripts/compliance-cellar-live-probe.mjs",
     "test:compliance:versions": "node --experimental-strip-types --test tests/legal-act-version.test.mjs",
-    "test:compliance:rodo-import-once": "node --experimental-strip-types scripts/compliance-rodo-import-once.mjs"
+    "test:compliance:rodo-import-once": "node --experimental-strip-types scripts/compliance-rodo-import-once.mjs",
+    "test:compliance:gdpr-reference": "node --experimental-strip-types --test tests/gdpr-official-references.test.mjs"
   },
   "dependencies": {
     "next": "^15.5.0",
