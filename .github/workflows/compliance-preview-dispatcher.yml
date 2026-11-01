@@ -3,15 +3,20 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+  actions: write
 jobs:
-  validate-preview-configuration:
+  dispatch-preview:
     runs-on: ubuntu-latest
     timeout-minutes: 3
     steps:
-      - name: Confirm safe manual dispatcher
+      - name: Dispatch ONLY dedicated feature-branch monitor
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
         shell: bash
         run: |
           set -euo pipefail
-          echo "PASS: GitHub Actions manual dispatcher is available on default branch."
-          echo "No secrets accessed. No HTTP calls. No database writes."
-          echo "Preview monitor must remain separately authorized and tested."
+          gh api --method POST "repos/$REPOSITORY/actions/workflows/compliance-preview-monitor.yml/dispatches" \
+            -f ref='feature/compliance-guardian'
+          echo "Dispatched Preview workflow on feature/compliance-guardian."
+          echo "This dispatcher does not read secrets or connect to a database."
