@@ -1,6 +1,6 @@
 // One-time Preview-only probe. Never prints document contents or secrets.
 if(process.env.VERCEL_ENV==="preview"&&process.env.VERCEL_GIT_COMMIT_REF==="feature/compliance-guardian"){
-  const url="https://publications.europa.eu/resource/celex/32016R0679";
+  const url="https://publications.europa.eu/resource/celex/32016R0679?language=eng";
   try{
     let target=url;
     let res;
@@ -10,7 +10,8 @@ if(process.env.VERCEL_ENV==="preview"&&process.env.VERCEL_GIT_COMMIT_REF==="feat
       const location=res.headers.get("location");
       if(!location)throw Error("missing redirect target");
       const next=new URL(location,target);
-      if(next.protocol!=="https:"||next.hostname!=="publications.europa.eu")throw Error("unapproved redirect");
+      if(next.protocol!=="https:"||!["publications.europa.eu","eur-lex.europa.eu"].includes(next.hostname))throw Error("unapproved redirect");
+      console.log("CELLAR redirect:",res.status,"to official host",next.hostname);
       target=next.toString();
     }
     const allowed=res.status===200&&/html|xml/.test(res.headers.get("content-type")??"");
@@ -22,5 +23,5 @@ if(process.env.VERCEL_ENV==="preview"&&process.env.VERCEL_GIT_COMMIT_REF==="feat
       console.log("CELLAR live retrieval:",!challenge&&markers>0?"DOCUMENT_STRUCTURE_FOUND":"UNVERIFIED_FORMAT",
         "article-markers",markers,"bytes",Buffer.byteLength(body));
     }
-  }catch{console.log("CELLAR live retrieval: NETWORK_OR_TIMEOUT_FAILURE");}
+  }catch(e){console.log("CELLAR live retrieval failure class:",e instanceof Error ? e.message.slice(0,80):"unknown");}
 }
