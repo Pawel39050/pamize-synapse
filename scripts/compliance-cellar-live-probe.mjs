@@ -2,7 +2,17 @@
 if(process.env.VERCEL_ENV==="preview"&&process.env.VERCEL_GIT_COMMIT_REF==="feature/compliance-guardian"){
   const url="https://publications.europa.eu/resource/celex/32016R0679";
   try{
-    const res=await fetch(url,{redirect:"manual",signal:AbortSignal.timeout(12000),headers:{Accept:"application/xhtml+xml","Accept-Language":"en"}});
+    let target=url;
+    let res;
+    for(let i=0;i<4;i++){
+      res=await fetch(target,{redirect:"manual",signal:AbortSignal.timeout(12000),headers:{Accept:"application/xhtml+xml","Accept-Language":"eng"}});
+      if(![301,302,303,307,308].includes(res.status))break;
+      const location=res.headers.get("location");
+      if(!location)throw Error("missing redirect target");
+      const next=new URL(location,target);
+      if(next.protocol!=="https:"||next.hostname!=="publications.europa.eu")throw Error("unapproved redirect");
+      target=next.toString();
+    }
     const allowed=res.status===200&&/html|xml/.test(res.headers.get("content-type")??"");
     if(!allowed){console.log("CELLAR live retrieval: BLOCKED; HTTP",res.status,"(no legal extraction attempted)");}
     else {
