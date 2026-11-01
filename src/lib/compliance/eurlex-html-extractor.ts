@@ -42,7 +42,13 @@ export function extractEurLexHtmlArticles(html:string):EurLexExtraction{
     seen.add(identifier);
     const start=(matches[i].index??0)+matches[i][0].length;
     const end=matches[i+1]?.index??html.length;
-    const body=plain(html.slice(start,end));
+    let body=plain(html.slice(start,end));
+    // The final EUR-Lex article can be followed by signatures and footnotes.
+    // Exclude them from provision comparison, never infer their legal meaning.
+    if(i===matches.length-1){
+      const endOfAct=/\bDone at Brussels,\s+\d{1,2}\s+[A-Za-z]+\s+\d{4}\b/i.exec(body);
+      if(endOfAct)body=body.slice(0,endOfAct.index).trim();
+    }
     if(!body||body.length>200_000)
       return {ok:false,reason:"Empty or oversized article body",reviewRequired:true};
     articles.push({identifier,heading:null,text:body});
