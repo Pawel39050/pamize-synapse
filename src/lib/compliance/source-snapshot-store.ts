@@ -29,9 +29,19 @@ function writableDatabaseUrl(): string {
   return url;
 }
 
+/** Independently verify the isolated branch before each read or write. */
+async function verifiedDatabase() {
+  const sql = neon(writableDatabaseUrl());
+  const rows = await sql`SELECT branch_marker FROM public.compliance_branch_identity WHERE id = 1`;
+  if (rows[0]?.branch_marker !== "pamize-compliance-preview-br-bitter-pond-b97srhrd") {
+    throw new Error("Compliance database branch identity verification failed");
+  }
+  return sql;
+}
+
 /** Reads need the same preview-only isolation gate until deployment review. */
 export async function latestSourceSnapshot(sourceId: string): Promise<SourceSnapshot | null> {
-  const sql = neon(writableDatabaseUrl());
+  const sql = await verifiedDatabase();
   const rows = await sql`
     SELECT source_id, fetched_at, sha256, etag, last_modified
     FROM compliance_source_snapshots
@@ -52,7 +62,7 @@ export async function latestSourceSnapshot(sourceId: string): Promise<SourceSnap
 
 export async function saveSourceSnapshot(snapshot: SourceSnapshot): Promise<void> {
   if (!/^[a-f0-9]{64}$/.test(snapshot.sha256)) throw new Error("Invalid source hash");
-  const sql = neon(writableDatabaseUrl());
+  const sql = await verifiedDatabase();
   await sql`
     INSERT INTO compliance_source_snapshots
       (source_id, fetched_at, sha256, etag, last_modified)
