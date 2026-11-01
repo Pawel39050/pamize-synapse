@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { initialAgents } from "../lib/catalog";
+import { legalSources } from "../lib/compliance/regulatory-sources";
 
 const capabilities = [
   {title:"AI Act Assessment",description:"Kwalifikacja przeznaczenia systemu, ról i potencjalnych obowiązków."},
@@ -47,6 +48,19 @@ export function ComplianceGuardian() {
           </div>)}
         </div>
         <p style={{marginTop:20}}><Link href="/modules/agent-registry" className="text-link">Przejdź do Agent Registry →</Link></p>
+      </section>
+      <section className="section-block panel">
+        <div className="panel-top"><h2>Oficjalne źródła prawa</h2><span className="tiny-tag">{legalSources.length} źródeł · bez połączenia online</span></div>
+        <p className="muted">Rejestr referencyjny. Podane adresy prowadzą do oficjalnych serwisów, ale aktualność i treść aktów nie są jeszcze pobierane ani automatycznie weryfikowane.</p>
+        <div className="agent-list">
+          {legalSources.map((source) => (
+            <div className="model-card" key={source.id}>
+              <h3>{source.title}</h3>
+              <p>{source.jurisdiction} · {source.kind} · status: niepodłączone</p>
+              <a className="text-link" href={source.officialUrl} target="_blank" rel="noopener noreferrer">Otwórz źródło urzędowe →</a>
+            </div>
+          ))}
+        </div>
       </section>
       <section className="section-block panel">
         <div className="panel-top"><h2>Regulatory Impact Analysis</h2><span className="pill">PLANOWANE</span></div>
