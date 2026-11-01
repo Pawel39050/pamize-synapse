@@ -4,11 +4,12 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "node scripts/compliance-preview-build-check.mjs && node scripts/compliance-preview-isolation-check.mjs && next build",
+    "build": "node scripts/compliance-preview-build-check.mjs && next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "test:compliance": "node --test tests/compliance-versioning.test.mjs",
-    "test:compliance:one-time": "node scripts/compliance-one-time-source-monitor.mjs"
+    "test:compliance:one-time": "node scripts/compliance-one-time-source-monitor.mjs",
+    "test:compliance:isolation": "node scripts/compliance-preview-isolation-check.mjs"
   },
   "dependencies": {
     "next": "^15.5.0",
