@@ -10,7 +10,7 @@ if(process.env.VERCEL_ENV==="preview"&&process.env.VERCEL_GIT_COMMIT_REF==="feat
       const location=res.headers.get("location");
       if(!location)throw Error("missing redirect target");
       const next=new URL(location,target);
-      if(next.protocol!=="https:"||!["publications.europa.eu","eur-lex.europa.eu"].includes(next.hostname))throw Error("unapproved redirect");
+      if(next.protocol!=="https:"||!["publications.europa.eu","eur-lex.europa.eu"].includes(next.hostname)) { console.log("CELLAR blocked redirect destination host:",next.hostname); throw Error("unapproved redirect"); }
       console.log("CELLAR redirect:",res.status,"to official host",next.hostname);
       target=next.toString();
     }
