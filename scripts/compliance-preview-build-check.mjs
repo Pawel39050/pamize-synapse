@@ -14,5 +14,10 @@ if (process.env.VERCEL_ENV !== "preview" || process.env.VERCEL_GIT_COMMIT_REF !=
   const sql = neon(connection);
   const result = await sql`SELECT current_database() AS database_name, to_regclass('public.compliance_source_snapshots') IS NOT NULL AS table_exists`;
   if (!result[0]?.table_exists) throw new Error("Compliance connection check: FAIL (snapshot table absent)");
-  console.log("Compliance connection check: PASS (Preview DB read-only; snapshot table exists)");
+  const identity = await sql`SELECT branch_marker FROM public.compliance_branch_identity WHERE id = 1`;
+  if (identity[0]?.branch_marker !== "pamize-compliance-preview-br-bitter-pond-b97srhrd") {
+    throw new Error("Compliance connection check: FAIL (wrong Neon branch identity)");
+  }
+  console.log("Compliance connection check: PASS (Preview DB marker verified; no writes)");
+
 }
