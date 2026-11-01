@@ -14,12 +14,12 @@ export function ComplianceGuardian() {
   return (
     <>
       <section className="notice compact" role="status">
-        <strong>Wersja demonstracyjna.</strong> Moduł nie monitoruje jeszcze przepisów, nie ocenia zgodności prawnej i nie blokuje operacji. Dane poniżej pochodzą z projektowego katalogu Synapse.
+        <strong>Wersja demonstracyjna.</strong> Pierwszy test monitoringu strony UODO wykonano w Preview. Historia rzeczywistych odcisków strony znajduje się niżej. Oceny zgodności i alerty prawne nie są jeszcze uruchomione.
       </section>
       <div className="kpi-grid">
         <div className="kpi"><span>Definicje agentów w katalogu</span><strong>{initialAgents.length}</strong><small>Nie oznacza aktywnych wdrożeń</small></div>
         <div className="kpi"><span>Oceny prawne wykonane</span><strong>0</strong><small>Brak podłączonego silnika analiz</small></div>
-        <div className="kpi"><span>Źródła regulacyjne online</span><strong>0</strong><small>Monitoring jeszcze nieuruchomiony</small></div>
+        <div className="kpi"><span>Automatycznie monitorowane źródła</span><strong>0</strong><small>Wykonano ręczne testy źródła UODO; harmonogram nieaktywny</small></div>
         <div className="kpi"><span>Analizy wpływu regulacji</span><strong>0</strong><small>Funkcja planowana</small></div>
       </div>
       <section className="panel">
@@ -50,13 +50,13 @@ export function ComplianceGuardian() {
         <p style={{marginTop:20}}><Link href="/modules/agent-registry" className="text-link">Przejdź do Agent Registry →</Link></p>
       </section>
       <section className="section-block panel">
-        <div className="panel-top"><h2>Oficjalne źródła prawa</h2><span className="tiny-tag">{legalSources.length} źródeł · bez połączenia online</span></div>
-        <p className="muted">Rejestr referencyjny. Podane adresy prowadzą do oficjalnych serwisów, ale aktualność i treść aktów nie są jeszcze pobierane ani automatycznie weryfikowane.</p>
+        <div className="panel-top"><h2>Oficjalne źródła prawa</h2><span className="tiny-tag">{legalSources.length} źródeł · 1 źródło przetestowano</span></div>
+        <p className="muted">Rejestr oficjalnych adresów. Testowo pobrano stronę UODO; pozostałe źródła nie są jeszcze monitorowane, a żaden akt prawny nie przeszedł weryfikacji wersji.</p>
         <div className="agent-list">
           {legalSources.map((source) => (
             <div className="model-card" key={source.id}>
               <h3>{source.title}</h3>
-              <p>{source.jurisdiction} · {source.kind} · status: niepodłączone</p>
+              <p>{source.jurisdiction} · {source.kind} · status: {source.id === "pl-uodo" ? "test pobrania zakończony" : "niepodłączone"}</p>
               <a className="text-link" href={source.officialUrl} target="_blank" rel="noopener noreferrer">Otwórz źródło urzędowe →</a>
             </div>
           ))}
