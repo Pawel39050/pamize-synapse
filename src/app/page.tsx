@@ -4,7 +4,8 @@ import { initialAgents, modules } from "../lib/catalog";
 const highlights = [
   {title:"Knowledge & Academy",detail:"18 rzeczywistych dokumentów PAMIZE, sześć kategorii i szybkie otwieranie plików OneDrive.",slug:"skills-knowledge",tag:"Katalog aktywny"},
   {title:"Agent Registry",detail:"Wersjonowane definicje cyfrowych pracowników i umiejętności.",slug:"agent-registry",tag:"Katalog ról"},
-  {title:"Agent Orchestrator",detail:"Demonstracja etapów delegowania i zatwierdzania zadań.",slug:"agent-orchestrator",tag:"Symulator"}
+  {title:"Agent Orchestrator",detail:"Demonstracja etapów delegowania i zatwierdzania zadań.",slug:"agent-orchestrator",tag:"Symulator"},
+  {title:"Compliance Guardian",detail:"Diagnostyka RODO i AI Act oraz wspólny dashboard spraw, priorytetów i działań naprawczych.",slug:"compliance-guardian",tag:"Demo · bez zapisu"}
 ];
 
 export default function DashboardPage() {
@@ -27,7 +28,7 @@ export default function DashboardPage() {
         <div className="kpi"><span>Uruchomieni agenci</span><strong>0</strong><small>Wymaga runtime i API</small></div>
       </section>
       <section className="section-block">
-        <div className="section-heading"><div><span className="eyebrow">FUNDAMENT SYSTEMU</span><h2>Trzy elementy bazowe</h2></div></div>
+        <div className="section-heading"><div><span className="eyebrow">FUNDAMENT SYSTEMU</span><h2>Dostępne moduły i prototypy</h2></div></div>
         <div className="feature-grid">
           {highlights.map((item,index) => (
             <Link href={`/modules/${item.slug}`} key={item.slug} className="feature-card">
