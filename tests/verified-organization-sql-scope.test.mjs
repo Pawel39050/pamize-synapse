@@ -3,12 +3,14 @@ import assert from "node:assert/strict";
 import {withVerifiedOrganizationScope} from "../src/lib/compliance/verified-organization-sql-scope.ts";
 const identity={issuer:"entra-id-verified",subject:"user-a",tenantId:"tenant-a",roles:["author"],organizationIds:[]};
 const membership={tenantId:"tenant-a",subject:"user-a",organizationId:"org-a",status:"active",roles:["author"]};
-function harness(records=[membership]){
+function harness(records=[membership],roleName="compliance_runtime_login_preview"){
  const calls=[];let connected=0,released=0;
  return {calls,get connected(){return connected},get released(){return released},
   directory:{async findForSubject(){return records}},
   provider:{async connect(){connected++;return {
-   async query(sql,params){calls.push({sql,params});return {rows:[],rowCount:1}},
+   async query(sql,params){calls.push({sql,params});
+    if(sql.startsWith("SELECT r.rolname"))return {rows:[{rolname:roleName,rolsuper:false,rolbypassrls:false,rolcreatedb:false,rolcreaterole:false,neon_superuser_member:false}],rowCount:1};
+    return {rows:[],rowCount:1}},
    release(){released++}
   }}}};
 }
@@ -39,4 +41,11 @@ test("failed scoped query rolls back and releases connection",async()=>{
  }}),/unexpected query error/);
  assert.equal(h.calls.at(-1).sql,"ROLLBACK");
  assert.equal(h.released,1);
+});
+
+test("rejects administrative Neon role before setting tenant context",async()=>{
+ const h=harness([membership],"neondb_owner");
+ await assert.rejects(withVerifiedOrganizationScope({...h,identity,organizationId:"org-a",work:async()=>null}),/Unsafe database runtime identity/);
+ assert.equal(h.calls.some(x=>x.sql.startsWith("SELECT set_config")),false);
+ assert.equal(h.calls.at(-1).sql,"ROLLBACK");
 });
