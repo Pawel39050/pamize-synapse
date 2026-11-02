@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "node scripts/compliance-preview-build-check.mjs && npm run test:compliance:provisions && npm run test:compliance:articles && npm run test:compliance:eurlex && npm run test:compliance:report && npm run test:compliance:versions && npm run test:compliance:gdpr-reference && npm run test:compliance:agent-obligations && npm run test:compliance:impact && next build",
+    "build": "node scripts/compliance-preview-build-check.mjs && npm run test:compliance:provisions && npm run test:compliance:articles && npm run test:compliance:eurlex && npm run test:compliance:report && npm run test:compliance:versions && npm run test:compliance:gdpr-reference && npm run test:compliance:agent-obligations && npm run test:compliance:impact && npm run test:compliance:assessment-review && next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "test:compliance": "node --test tests/compliance-versioning.test.mjs",
@@ -19,7 +19,8 @@
     "test:compliance:rodo-import-once": "node --experimental-strip-types scripts/compliance-rodo-import-once.mjs",
     "test:compliance:gdpr-reference": "node --experimental-strip-types --test tests/gdpr-official-references.test.mjs",
     "test:compliance:agent-obligations": "node --experimental-strip-types --test tests/regulatory-obligation-engine.test.mjs",
-    "test:compliance:impact": "node --experimental-strip-types --test tests/regulatory-impact-planner.test.mjs"
+    "test:compliance:impact": "node --experimental-strip-types --test tests/regulatory-impact-planner.test.mjs",
+    "test:compliance:assessment-review": "node --experimental-strip-types --test tests/assessment-review-model.test.mjs"
   },
   "dependencies": {
     "next": "^15.5.0",
