@@ -35,3 +35,18 @@ export function validateOAuthCallback(input:{transaction:OAuthTransaction;return
   now<input.transaction.createdAt||now-input.transaction.createdAt>5*60*1000)
   throw Error("OAuth state missing, mismatched or expired");
 }
+
+/** Validation shared by the server-only exchange and its network-free tests. */
+export function validateEntraExchangeRequest(args:{
+ tenantId:string;clientId:string;clientSecret:string;redirectUri:string;
+ code:string;returnedState:string|null;transaction:OAuthTransaction;
+}):void{
+ validateOAuthCallback({transaction:args.transaction,returnedState:args.returnedState});
+ if(!/^[0-9a-f-]{36}$/i.test(args.tenantId)||!/^[0-9a-f-]{36}$/i.test(args.clientId)||
+    !args.clientSecret||args.clientSecret.length<8||!args.code||args.code.length>4096)
+  throw Error("Invalid confidential OAuth configuration");
+ const callback=new URL(args.redirectUri);
+ if(callback.origin!=="https://pamize-synapse-git-feature-comp-7ded4c-radekdomagalski1978-9203.vercel.app"||
+    callback.pathname!=="/api/compliance/auth/callback"||callback.search||callback.hash)
+  throw Error("Callback address is not approved");
+}
