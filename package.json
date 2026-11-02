@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "node scripts/compliance-preview-build-check.mjs && npm run test:compliance:provisions && npm run test:compliance:articles && npm run test:compliance:eurlex && npm run test:compliance:report && npm run test:compliance:versions && npm run test:compliance:gdpr-reference && npm run test:compliance:agent-obligations && npm run test:compliance:impact && npm run test:compliance:assessment-review && npm run test:compliance:authorization && npm run test:compliance:entra-boundary && npm run test:compliance:entra-roles && npm run test:compliance:entra-oauth && npm run test:compliance:entra-exchange && next build",
+    "build": "node scripts/compliance-preview-build-check.mjs && npm run test:compliance:provisions && npm run test:compliance:articles && npm run test:compliance:eurlex && npm run test:compliance:report && npm run test:compliance:versions && npm run test:compliance:gdpr-reference && npm run test:compliance:agent-obligations && npm run test:compliance:impact && npm run test:compliance:assessment-review && npm run test:compliance:authorization && npm run test:compliance:entra-boundary && npm run test:compliance:entra-roles && npm run test:compliance:entra-oauth && npm run test:compliance:entra-exchange && npm run test:compliance:oauth-transaction && next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "test:compliance": "node --test tests/compliance-versioning.test.mjs",
@@ -25,7 +25,8 @@
     "test:compliance:entra-boundary": "node --experimental-strip-types --test tests/entra-auth-boundary.test.mjs",
     "test:compliance:entra-roles": "node --experimental-strip-types --test tests/entra-role-map.test.mjs",
     "test:compliance:entra-oauth": "node --experimental-strip-types --test tests/entra-oauth-flow.test.mjs",
-    "test:compliance:entra-exchange": "node --experimental-strip-types --test tests/entra-code-exchange.test.mjs"
+    "test:compliance:entra-exchange": "node --experimental-strip-types --test tests/entra-code-exchange.test.mjs",
+    "test:compliance:oauth-transaction": "node --experimental-strip-types --test tests/entra-oauth-transaction.test.mjs"
   },
   "dependencies": {
     "next": "^15.5.0",
