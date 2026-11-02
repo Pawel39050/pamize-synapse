@@ -1,5 +1,5 @@
 import "server-only";
-import {validateOAuthCallback,type OAuthTransaction} from "./entra-oauth-flow";
+import {validateEntraExchangeRequest,type OAuthTransaction} from "./entra-oauth-flow";
 
 export type TokenResponse={id_token:string;token_type:string;expires_in:number;access_token?:string};
 
@@ -9,14 +9,7 @@ export async function exchangeEntraAuthorizationCode(args:{
  tenantId:string;clientId:string;clientSecret:string;redirectUri:string;
  code:string;returnedState:string|null;transaction:OAuthTransaction;
 }):Promise<TokenResponse>{
- validateOAuthCallback({transaction:args.transaction,returnedState:args.returnedState});
- if(!/^[0-9a-f-]{36}$/i.test(args.tenantId)||!/^[0-9a-f-]{36}$/i.test(args.clientId)||
-    !args.clientSecret||args.clientSecret.length<8||!args.code||args.code.length>4096)
-   throw Error("Invalid confidential OAuth configuration");
- const callback=new URL(args.redirectUri);
- if(callback.origin!=="https://pamize-synapse-git-feature-comp-7ded4c-radekdomagalski1978-9203.vercel.app"||
-   callback.pathname!=="/api/compliance/auth/callback"||callback.search||callback.hash)
-   throw Error("Callback address is not approved");
+ validateEntraExchangeRequest(args);
  const endpoint=`https://login.microsoftonline.com/${args.tenantId}/oauth2/v2.0/token`;
  const body=new URLSearchParams({grant_type:"authorization_code",client_id:args.clientId,
   client_secret:args.clientSecret,code:args.code,redirect_uri:args.redirectUri,
