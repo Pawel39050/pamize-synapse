@@ -21,6 +21,14 @@ export async function withVerifiedOrganizationScope<T>(input:{
  let began=false;
  try{
   await connection.query("BEGIN",[]);began=true;
+  const roleCheck=await connection.query(
+   "SELECT r.rolname,r.rolsuper,r.rolbypassrls,r.rolcreatedb,r.rolcreaterole, EXISTS(SELECT 1 FROM pg_auth_members m JOIN pg_roles granted ON granted.oid=m.roleid WHERE m.member=r.oid AND granted.rolname='neon_superuser') AS neon_superuser_member FROM pg_roles r WHERE r.rolname=current_user",[]);
+  const role=roleCheck.rows[0];
+  if(roleCheck.rows.length!==1||role.rolname!=="compliance_runtime_login_preview"||
+     role.rolsuper!==false||role.rolbypassrls!==false||
+     role.rolcreatedb!==false||role.rolcreaterole!==false||
+     role.neon_superuser_member!==false)
+    throw Error("Unsafe database runtime identity");
   // SET LOCAL via set_config only lasts for this transaction, never leaks to pooled connections.
   await connection.query("SELECT set_config('app.compliance_tenant_id',$1,true)",[verified.tenantId]);
   await connection.query("SELECT set_config('app.compliance_organization_id',$1,true)",[input.organizationId]);
