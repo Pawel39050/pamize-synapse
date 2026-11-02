@@ -20,13 +20,18 @@ export function appendRemediationEvent(args:{
  const {ledger,action,principal,operation,previousState,at}=args;
  if(!canAccessRemediation(principal,ledger.tenantId,ledger.organizationId,operation))
   throw Error("Unauthorized remediation action");
- if(!ledger.actions.some(a=>a.id===action.id&&a.state===previousState)&&previousState!==null)
-  throw Error("Stale remediation transition");
+ const current=ledger.actions.find(a=>a.id===action.id);
+ if(!current||current.state!==previousState)throw Error("Stale remediation transition");
+ if(!verifyRemediationLedger(ledger))throw Error("Audit ledger integrity failure");
+ const valid:Record<RemediationState,RemediationState[]>={proposed:["assigned"],assigned:["in-progress"],"in-progress":["awaiting-review"],"awaiting-review":["approved","rejected"],approved:[],rejected:["in-progress"]};
+ if(!valid[current.state].includes(action.state))throw Error("Invalid state transition");
  if(operation==="review"&&(action.state!=="approved"&&action.state!=="rejected"||
-   principal!.subject===action.ownerId))throw Error("Independent reviewer required");
+   principal!.subject===current.ownerId))throw Error("Independent reviewer required");
  if(operation==="assign"&&action.state!=="assigned"||
     operation==="progress"&&!["in-progress","awaiting-review"].includes(action.state))
   throw Error("Invalid operation/state combination");
+ if(operation==="progress"&&principal!.subject!==current.ownerId)throw Error("Only owner can progress action");
+ if(operation==="assign"&&(!action.ownerId||!action.dueDate))throw Error("Owner and deadline required");
  if(!Number.isFinite(Date.parse(at)))throw Error("Invalid audit timestamp");
  const last=ledger.events.at(-1);
  const eventBase={id:randomUUID(),actionId:action.id,tenantId:ledger.tenantId,
