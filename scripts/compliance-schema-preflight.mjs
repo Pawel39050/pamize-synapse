@@ -3,7 +3,7 @@ const BRANCH="pamize-compliance-preview-br-bitter-pond-b97srhrd";
 export function assessSchemaReadiness(snapshot){
  if(snapshot.marker!==BRANCH)throw Error("Wrong Neon branch");
  const missing=["actions","events","memberships"].filter(key=>!snapshot[key]);
- const privileged=snapshot.db_role==="neondb_owner";
+ const privileged=snapshot.db_role==="neondb_owner"||snapshot.superuser===true||snapshot.bypass_rls===true||snapshot.create_db===true||snapshot.create_role===true||snapshot.inherits_neon_superuser===true;
  return {ready:missing.length===0&&!privileged,missing,privileged,
   reason:missing.length?"Schema migration not applied":privileged?"Database owner credentials cannot be runtime role":"Schema exists; manual RLS verification still required"};
 }
@@ -19,7 +19,14 @@ export async function inspectPreviewComplianceSchema(){
   to_regclass('public.compliance_remediation_actions')::text AS actions,
   to_regclass('public.compliance_remediation_events')::text AS events,
   to_regclass('public.compliance_organization_memberships')::text AS memberships,
-  current_user AS db_role`;
+  current_user AS db_role,
+  (SELECT rolsuper FROM pg_roles WHERE rolname=current_user) AS superuser,
+  (SELECT rolbypassrls FROM pg_roles WHERE rolname=current_user) AS bypass_rls,
+  (SELECT rolcreatedb FROM pg_roles WHERE rolname=current_user) AS create_db,
+  (SELECT rolcreaterole FROM pg_roles WHERE rolname=current_user) AS create_role,
+  EXISTS(SELECT 1 FROM pg_auth_members m JOIN pg_roles r ON r.oid=m.roleid
+    WHERE m.member=(SELECT oid FROM pg_roles WHERE rolname=current_user)
+      AND r.rolname='neon_superuser') AS inherits_neon_superuser`;
  return assessSchemaReadiness(rows[0]);
 }
 if(process.argv[1]?.endsWith("compliance-schema-preflight.mjs")){
