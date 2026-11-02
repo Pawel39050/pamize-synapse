@@ -30,3 +30,16 @@ test("AI Act model does not report legal violations without human judgment",()=>
  assert.equal(model.dataScope,"local-unsaved-demo");
  assert.equal(model.legalViolationEstablished,false);
 });
+
+test("joint executive dashboard includes GDPR and AI Act without duplicating tasks",()=>{
+ const findings=[
+  ...assessRegulatoryObligations({organizationId:"DEMO",domain:"GDPR",applicability:{},evidence:{}}),
+  ...assessRegulatoryObligations({organizationId:"DEMO",domain:"AI_ACT",applicability:{},evidence:{}})
+ ];
+ const model=buildComplianceDashboardModel({findings,assignments:{},referenceDate:"2026-11-02"});
+ assert.equal(model.taskCount,5);
+ assert.equal(model.unknownApplicabilityCount,5);
+ assert.equal(model.unassignedCount,5);
+ assert.equal(new Set(model.actions.map(a=>a.obligationId)).size,5);
+ assert.ok(model.actions.every(a=>a.state==="proposed"));
+});
