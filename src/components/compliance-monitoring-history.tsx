@@ -27,6 +27,8 @@ export async function ComplianceMonitoringHistory() {
       <div className="notice compact">
         <h3>Raport sprostowania RODO — 23 maja 2018 (język EN)</h3>
         <p>CELEX: {corrigendum.correctionCelex} · Zidentyfikowane korekty: {corrigendum.coverageCount} · Porównania fragmentów: {corrigendum.changes.length} · Zatwierdzone prawnie: {corrigendum.verifiedCount} · Zapisy opisowe zamiast tekstu: {corrigendum.placeholderCount} · Status: wymaga weryfikacji prawnej.</p>
+        {corrigendum.status === "connected" && <p><strong>Spójność rejestru:</strong> {corrigendum.unreviewedSections.length===0 && corrigendum.orphanedSections.length===0 ? "15 pozycji sparowanych z zapisanymi porównaniami" : "wykryto niespójności — wymagana kontrola"}</p>}
+        {corrigendum.orphanedSections.length>0 && <p><strong>Porównania bez pozycji źródłowej:</strong> {corrigendum.orphanedSections.join(", ")}</p>}
         {corrigendum.unreviewedSections.length > 0 && <p><strong>Oczekują na szczegółową ekstrakcję:</strong> {corrigendum.unreviewedSections.join(", ")}</p>}
         <p><a href={corrigendum.officialUrl} target="_blank" rel="noopener noreferrer">Dokument urzędowy EUR-Lex</a></p>
         {corrigendum.status === "unavailable" ? <p role="status">{corrigendum.reason}</p> : (
