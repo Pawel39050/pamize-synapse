@@ -26,7 +26,7 @@ export async function ComplianceMonitoringHistory() {
       </div>
       <div className="notice compact">
         <h3>Raport sprostowania RODO — 23 maja 2018 (język EN)</h3>
-        <p>CELEX: {corrigendum.correctionCelex} · Zidentyfikowane korekty: {corrigendum.coverageCount} · Porównania fragmentów: {corrigendum.changes.length} · Status: wymaga weryfikacji prawnej.</p>
+        <p>CELEX: {corrigendum.correctionCelex} · Zidentyfikowane korekty: {corrigendum.coverageCount} · Porównania fragmentów: {corrigendum.changes.length} · Zatwierdzone prawnie: {corrigendum.verifiedCount} · Zapisy opisowe zamiast tekstu: {corrigendum.placeholderCount} · Status: wymaga weryfikacji prawnej.</p>
         {corrigendum.unreviewedSections.length > 0 && <p><strong>Oczekują na szczegółową ekstrakcję:</strong> {corrigendum.unreviewedSections.join(", ")}</p>}
         <p><a href={corrigendum.officialUrl} target="_blank" rel="noopener noreferrer">Dokument urzędowy EUR-Lex</a></p>
         {corrigendum.status === "unavailable" ? <p role="status">{corrigendum.reason}</p> : (
@@ -36,7 +36,7 @@ export async function ComplianceMonitoringHistory() {
                 <h4>{change.section}</h4>
                 <p><strong>Przed (fragment):</strong> {change.previous}</p>
                 <p><strong>Po (fragment lub informacja o usunięciu):</strong> {change.corrected}</p>
-                <small>Porównanie może obejmować wyłącznie zmieniony fragment, nie pełen artykuł. Wymagana kontrola brzmienia i zatwierdzenie przez prawnika.</small>
+                <small>{change.corrected.startsWith("[") ? "Opis operacji, a nie dosłowny tekst po zmianie. " : ""}Porównanie może obejmować wyłącznie fragment, nie pełen artykuł. Wymagana kontrola brzmienia i zatwierdzenie przez prawnika.</small>
               </article>
             ))}
           </div>
