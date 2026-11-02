@@ -14,5 +14,8 @@ if (process.env.VERCEL_ENV === "preview" && process.env.VERCEL_GIT_COMMIT_REF ==
   const sql = neon(isolated);
   const result = await sql`SELECT to_regclass('public.compliance_source_snapshots') IS NOT NULL AS exists`;
   if (!result[0]?.exists) throw new Error("Isolation check: source snapshots table missing");
+  const identity = await sql`SELECT branch_marker FROM public.compliance_branch_identity WHERE id = 1`;
+  if (identity[0]?.branch_marker !== "pamize-compliance-preview-br-bitter-pond-b97srhrd")
+    throw new Error("Isolation check: wrong Neon branch identity");
   console.log("Compliance isolation check: PASS");
 }

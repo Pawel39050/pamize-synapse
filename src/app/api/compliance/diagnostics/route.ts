@@ -35,9 +35,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({status: "host-mismatch"}, {status: 503});
     }
     const sql = neon(connection);
-    const result = await sql`SELECT 1 AS ok`;
-    return NextResponse.json({status: result[0]?.ok === 1 ? "pass" : "query-failed",
-      branchIdentity: "not-verified-by-sql",
+    const result = await sql`
+      SELECT branch_marker
+      FROM public.compliance_branch_identity
+      WHERE id = 1
+    `;
+    const branchVerified = result[0]?.branch_marker ===
+      "pamize-compliance-preview-br-bitter-pond-b97srhrd";
+    return NextResponse.json({status: branchVerified ? "pass" : "identity-mismatch",
+      branchIdentity: branchVerified ? "verified" : "mismatch",
       writesPerformed: false}, {headers: {"Cache-Control":"no-store"}});
   } catch {
     return NextResponse.json({status: "connection-failed"}, {status: 503});
