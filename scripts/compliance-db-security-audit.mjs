@@ -19,7 +19,7 @@ export function evaluateComplianceDatabaseSecurity(rows){
   failures.push("Membership table unexpectedly exposed");
  const expectedPolicies=[["compliance_remediation_actions","preview_action_read_scope"],["compliance_remediation_events","preview_event_read_scope"]];
  for(const [table,name] of expectedPolicies){
-  if(policies.filter(p=>p.table_name===table&&p.policy_name===name&&p.command==="SELECT"&&p.roles?.includes("compliance_runtime_restricted_preview")).length!==1)
+  if(policies.filter(p=>p.table_name===table&&p.policy_name===name&&p.command==="SELECT"&&p.roles?.length===1&&p.roles[0]==="compliance_runtime_restricted_preview"&&["app.compliance_tenant_id","app.compliance_organization_id","app.compliance_subject_id"].every(key=>typeof p.qualification==="string"&&p.qualification.includes(key))).length!==1)
    failures.push(name+": missing or misconfigured policy");
  }
  if(policies.length!==expectedPolicies.length)failures.push("Unexpected additional policy");
@@ -37,7 +37,7 @@ export async function inspectComplianceDatabaseSecurity(sql){
    EXISTS(SELECT 1 FROM pg_auth_members m JOIN pg_roles g ON g.oid=m.roleid
     WHERE m.member=r.oid AND g.rolname='neon_superuser') AS neon_superuser_member
    FROM pg_roles r WHERE r.rolname IN ('compliance_runtime_login_preview','compliance_runtime_restricted_preview')`,
-  sql`SELECT tablename AS table_name,policyname AS policy_name,cmd AS command,roles FROM pg_policies WHERE schemaname='public'
+  sql`SELECT tablename AS table_name,policyname AS policy_name,cmd AS command,roles,qual AS qualification FROM pg_policies WHERE schemaname='public'
    AND tablename IN ('compliance_organization_memberships','compliance_remediation_actions','compliance_remediation_events')`
  ]);
  return evaluateComplianceDatabaseSecurity({tables,roles,policies});
