@@ -1,8 +1,8 @@
 "use client";
 import {useMemo,useState} from "react";
 import type {ObligationFinding} from "../lib/compliance/regulatory-obligation-engine";
-import {buildComplianceReviewQueue} from "../lib/compliance/compliance-review-queue";
-import {createRemediationPlan,assignRemediation,type RemediationAction} from "../lib/compliance/remediation-plan";
+import {buildComplianceDashboardModel} from "../lib/compliance/compliance-dashboard-model";
+import type {RemediationAction} from "../lib/compliance/remediation-plan";
 
 const priorityName={high:"Wysoki",medium:"Średni",normal:"Standardowy"} as const;
 const stateName={proposed:"Propozycja",assigned:"Przydzielone","in-progress":"W realizacji","awaiting-review":"Do oceny",approved:"Zatwierdzone",rejected:"Odrzucone"} as const;
@@ -13,28 +13,22 @@ export function ComplianceManagementDashboard({findings}:{findings:readonly Obli
  const [priorityFilter,setPriorityFilter]=useState("all");
  const [ownerSearch,setOwnerSearch]=useState("");
  const [today,setToday]=useState("");
- const [errors,setErrors]=useState<Record<string,string>>({});
- const tasks=useMemo(()=>buildComplianceReviewQueue(findings),[findings]);
- const plan=useMemo(()=>createRemediationPlan(tasks).map(action=>{
-  const assignment=assignments[action.obligationId];
-  if(!assignment)return action;
-  try{return assignRemediation(action,assignment.ownerId,assignment.dueDate);}
-  catch{return action;}
- }),[tasks,assignments]);
+ const model=useMemo(()=>buildComplianceDashboardModel({findings,assignments,referenceDate:today}),[findings,assignments,today]);
+ const plan=model.actions;
  const visible=plan.filter(p=>(priorityFilter==="all"||p.priority===priorityFilter)&&
   (!ownerSearch||p.ownerId?.toLowerCase().includes(ownerSearch.toLowerCase())||
     p.obligationId.toLowerCase().includes(ownerSearch.toLowerCase())));
  const outstanding=plan.filter(p=>p.state!=="approved");
- const overdue=plan.filter(p=>p.dueDate&&today&&p.dueDate<today&&p.state!=="approved").length;
  return <section className="section-block panel" aria-label="Panel zarządczy Compliance Guardian">
   <div className="panel-top"><h2>Compliance Management Dashboard</h2><span className="pill">DEMO · DANE LOKALNE</span></div>
   <p className="muted">Wskaźniki wynikają tylko z odpowiedzi w diagnostyce powyżej. Nie są audytem prawnym ani rzeczywistym raportem organizacji. Przydziały są demonstracyjne, nie są zapisywane ani wysyłane do serwera.</p>
   <div className="kpi-grid">
-   <div className="kpi"><span>Sprawy do rozpatrzenia</span><strong>{outstanding.length}</strong><small>Brak zatwierdzeń prawnych</small></div>
-   <div className="kpi"><span>Priorytet wysoki</span><strong>{outstanding.filter(p=>p.priority==="high").length}</strong><small>Wstępne braki dowodowe</small></div>
-   <div className="kpi"><span>Nieprzydzielone</span><strong>{outstanding.filter(p=>!p.ownerId).length}</strong><small>Wymagają wskazania właściciela</small></div>
-   <div className="kpi"><span>Po terminie</span><strong>{today?overdue:"—"}</strong><small>Po ustawieniu daty referencyjnej</small></div>
+   <div className="kpi"><span>Sprawy do rozpatrzenia</span><strong>{outstanding.length}</strong><small>Weryfikacja prawna nieprzeprowadzona</small></div>
+   <div className="kpi"><span>Priorytet wysoki</span><strong>{model.highPriorityCount}</strong><small>Wstępne braki dowodowe</small></div>
+   <div className="kpi"><span>Nieprzydzielone</span><strong>{model.unassignedCount}</strong><small>Wymagają wskazania właściciela</small></div>
+   <div className="kpi"><span>Po terminie</span><strong>{model.overdueCount??"—"}</strong><small>Po ustawieniu daty referencyjnej</small></div>
   </div>
+  <p className="muted">Oceny nieustalone: {model.unknownApplicabilityCount} · Potencjalne braki dowodów: {model.possibleEvidenceGapCount} · Przydzielone demonstracyjnie: {model.assignedCount}</p>
   <div className="notice compact">
    <label htmlFor="comp-filter">Priorytet: </label>
    <select id="comp-filter" value={priorityFilter} onChange={e=>setPriorityFilter(e.target.value)}>
@@ -62,12 +56,11 @@ export function ComplianceManagementDashboard({findings}:{findings:readonly Obli
       onChange={e=>setAssignments(current=>({...current,[action.obligationId]:{ownerId:current[action.obligationId]?.ownerId??"",dueDate:e.target.value}}))}/>
      {initial&&action.state==="proposed"&&initial.ownerId&&initial.dueDate&&
        <p role="status">Nieprawidłowy właściciel lub data zadania.</p>}
-     {errors[action.obligationId]&&<p role="status">{errors[action.obligationId]}</p>}
-     <p><a href={action.sourceUrl} target="_blank" rel="noopener noreferrer">Podstawa prawna · EUR-Lex</a></p>
+          <p><a href={action.sourceUrl} target="_blank" rel="noopener noreferrer">Podstawa prawna · EUR-Lex</a></p>
      <small>Nie ustalono naruszenia prawa. Dalsze zmiany stanu wymagają autoryzowanego przepływu z recenzentem; panel demonstracyjny ich nie zatwierdza.</small>
     </article>;
    })}
   </div>
-  <button type="button" onClick={()=>{setAssignments({});setPriorityFilter("all");setOwnerSearch("");setToday("");setErrors({});}}>Wyczyść demonstracyjny plan</button>
+  <button type="button" onClick={()=>{setAssignments({});setPriorityFilter("all");setOwnerSearch("");setToday("");}}>Wyczyść demonstracyjny plan</button>
  </section>;
 }
