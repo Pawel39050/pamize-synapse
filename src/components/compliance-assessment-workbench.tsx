@@ -2,6 +2,7 @@
 import {useMemo,useState} from "react";
 import {OBLIGATIONS,assessRegulatoryObligations,type RegulatoryDomain} from "../lib/compliance/regulatory-obligation-engine";
 import {planRegulatoryImpact} from "../lib/compliance/regulatory-impact-planner";
+import {ComplianceManagementDashboard} from "./compliance-management-dashboard";
 
 /** Local-only diagnostics. No company data are submitted to a server or persisted. */
 export function ComplianceAssessmentWorkbench(){
@@ -17,7 +18,7 @@ export function ComplianceAssessmentWorkbench(){
    processId:"LOCAL-PROCESS",processName:processName.trim()||"Proces bez nazwy",
    ownerId:null,obligationIds:catalog.map(o=>o.id)
  }]),[findings,processName,domain]);
- return <section className="section-block panel">
+ return <><section className="section-block panel">
    <div className="panel-top"><h2>Diagnostyka zgodności · wersja testowa</h2><span className="pill">LOKALNIE · BEZ ZAPISU</span></div>
    <p className="muted">Wstępna analiza, nie opinia prawna. Wpisane odpowiedzi i nazwa procesu nie są wysyłane do Neon ani zapisywane na serwerze. Korzystaj wyłącznie z przykładowych lub niesensytywnych danych.</p>
    <div className="notice compact">
@@ -64,5 +65,5 @@ export function ComplianceAssessmentWorkbench(){
      </article>;
    })}</div>
    <button type="button" onClick={()=>{setAnswers({});setEvidence({});setProcessName("Przykładowy proces");}}>Wyczyść lokalną diagnozę</button>
- </section>;
+ </section><ComplianceManagementDashboard findings={findings}/></>;
 }
