@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "node scripts/compliance-preview-build-check.mjs && npm run test:compliance:provisions && npm run test:compliance:articles && npm run test:compliance:eurlex && npm run test:compliance:report && npm run test:compliance:versions && npm run test:compliance:gdpr-reference && npm run test:compliance:agent-obligations && npm run test:compliance:impact && npm run test:compliance:assessment-review && npm run test:compliance:authorization && npm run test:compliance:entra-boundary && npm run test:compliance:entra-roles && npm run test:compliance:entra-oauth && npm run test:compliance:entra-exchange && npm run test:compliance:oauth-transaction && npm run test:compliance:entra-session && npm run test:compliance:entra-readiness && npm run test:compliance:review-queue && npm run test:compliance:remediation && npm run test:compliance:remediation-ledger && npm run test:compliance:remediation-service && npm run test:compliance:remediation-store && next build",
+    "build": "node scripts/compliance-preview-build-check.mjs && npm run test:compliance:provisions && npm run test:compliance:articles && npm run test:compliance:eurlex && npm run test:compliance:report && npm run test:compliance:versions && npm run test:compliance:gdpr-reference && npm run test:compliance:agent-obligations && npm run test:compliance:impact && npm run test:compliance:assessment-review && npm run test:compliance:authorization && npm run test:compliance:entra-boundary && npm run test:compliance:entra-roles && npm run test:compliance:entra-oauth && npm run test:compliance:entra-exchange && npm run test:compliance:oauth-transaction && npm run test:compliance:entra-session && npm run test:compliance:entra-readiness && npm run test:compliance:review-queue && npm run test:compliance:remediation && npm run test:compliance:remediation-ledger && npm run test:compliance:remediation-service && npm run test:compliance:remediation-store && npm run test:compliance:dashboard-integration && next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "test:compliance": "node --test tests/compliance-versioning.test.mjs",
@@ -33,7 +33,8 @@
     "test:compliance:remediation": "node --experimental-strip-types --test tests/remediation-plan.test.mjs",
     "test:compliance:remediation-ledger": "node --experimental-strip-types --test tests/remediation-ledger-integrity.test.mjs",
     "test:compliance:remediation-service": "node --experimental-strip-types --test tests/remediation-application-service.test.mjs",
-    "test:compliance:remediation-store": "node --experimental-strip-types --test tests/remediation-scoped-store.test.mjs"
+    "test:compliance:remediation-store": "node --experimental-strip-types --test tests/remediation-scoped-store.test.mjs",
+    "test:compliance:dashboard-integration": "node --experimental-strip-types --test tests/compliance-dashboard-integration.test.mjs"
   },
   "dependencies": {
     "next": "^15.5.0",
