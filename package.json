@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "node scripts/compliance-preview-build-check.mjs && npm run test:compliance:provisions && npm run test:compliance:articles && npm run test:compliance:eurlex && npm run test:compliance:report && npm run test:compliance:versions && npm run test:compliance:gdpr-reference && npm run test:compliance:agent-obligations && npm run test:compliance:impact && npm run test:compliance:assessment-review && npm run test:compliance:authorization && npm run test:compliance:entra-boundary && npm run test:compliance:entra-roles && npm run test:compliance:entra-oauth && npm run test:compliance:entra-exchange && npm run test:compliance:oauth-transaction && npm run test:compliance:entra-session && npm run test:compliance:entra-readiness && npm run test:compliance:review-queue && npm run test:compliance:remediation && next build",
+    "build": "node scripts/compliance-preview-build-check.mjs && npm run test:compliance:provisions && npm run test:compliance:articles && npm run test:compliance:eurlex && npm run test:compliance:report && npm run test:compliance:versions && npm run test:compliance:gdpr-reference && npm run test:compliance:agent-obligations && npm run test:compliance:impact && npm run test:compliance:assessment-review && npm run test:compliance:authorization && npm run test:compliance:entra-boundary && npm run test:compliance:entra-roles && npm run test:compliance:entra-oauth && npm run test:compliance:entra-exchange && npm run test:compliance:oauth-transaction && npm run test:compliance:entra-session && npm run test:compliance:entra-readiness && npm run test:compliance:review-queue && npm run test:compliance:remediation && npm run test:compliance:remediation-ledger && next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "test:compliance": "node --test tests/compliance-versioning.test.mjs",
@@ -30,7 +30,8 @@
     "test:compliance:entra-session": "node --experimental-strip-types --test tests/entra-session.test.mjs",
     "test:compliance:entra-readiness": "node --experimental-strip-types --test tests/entra-setup-readiness.test.mjs",
     "test:compliance:review-queue": "node --experimental-strip-types --test tests/compliance-review-queue.test.mjs",
-    "test:compliance:remediation": "node --experimental-strip-types --test tests/remediation-plan.test.mjs"
+    "test:compliance:remediation": "node --experimental-strip-types --test tests/remediation-plan.test.mjs",
+    "test:compliance:remediation-ledger": "node --experimental-strip-types --test tests/remediation-ledger-integrity.test.mjs"
   },
   "dependencies": {
     "next": "^15.5.0",
