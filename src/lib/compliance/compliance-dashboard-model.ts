@@ -1,6 +1,6 @@
-import type {ObligationFinding} from "./regulatory-obligation-engine";
-import {buildComplianceReviewQueue} from "./compliance-review-queue";
-import {createRemediationPlan,assignRemediation} from "./remediation-plan";
+import type {ObligationFinding} from "./regulatory-obligation-engine.ts";
+import {buildComplianceReviewQueue} from "./compliance-review-queue.ts";
+import {createRemediationPlan,assignRemediation} from "./remediation-plan.ts";
 export type DemoAssignment={ownerId:string;dueDate:string};
 export function buildComplianceDashboardModel(input:{
  findings:readonly ObligationFinding[];
