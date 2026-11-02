@@ -4,9 +4,9 @@ import type {VerifiedPrincipal} from "./assessment-authorization";
 import {resolveEntraComplianceRoles} from "./entra-role-map";
 
 const b64=(s:string)=>Buffer.from(s,"base64url");
-type Claims={aud?:string;iss?:string;tid?:string;oid?:string;sub?:string;exp?:number;nbf?:number;roles?:unknown};
+type Claims={aud?:string;iss?:string;tid?:string;oid?:string;sub?:string;exp?:number;nbf?:number;roles?:unknown;nonce?:string};
 type Jwk={kty:string;kid?:string;use?:string;alg?:string;n?:string;e?:string};
-export type EntraVerifierConfig={tenantId:string;clientId:string;organizationMemberships:Readonly<Record<string,readonly string[]>>};
+export type EntraVerifierConfig={tenantId:string;clientId:string;organizationMemberships:Readonly<Record<string,readonly string[]>>;expectedNonce?:string};
 
 /** Fail-closed access-token verification. Requires actual Microsoft-signed tokens and
  * organization membership supplied by a trusted server-side application database.
@@ -24,7 +24,8 @@ export async function verifyEntraAccessToken(token:string,config:EntraVerifierCo
  if(claims.iss!==issuer||claims.tid!==config.tenantId||claims.aud!==config.clientId||
   !Number.isFinite(claims.exp)||claims.exp!<=now||claims.exp!>now+86400||
   (claims.nbf!=null&&(!Number.isFinite(claims.nbf)||claims.nbf>now+60))||
-  !(claims.oid||claims.sub))throw Error("Invalid Entra claims");
+  !(claims.oid||claims.sub)||
+  (config.expectedNonce!==undefined&&(!config.expectedNonce||claims.nonce!==config.expectedNonce)))throw Error("Invalid Entra claims");
  const response=await fetch(`https://login.microsoftonline.com/${config.tenantId}/discovery/v2.0/keys`,{
   signal:AbortSignal.timeout(5000),cache:"no-store"});
  if(!response.ok)throw Error("Entra signing keys unavailable");
