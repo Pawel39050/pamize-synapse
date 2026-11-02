@@ -16,6 +16,12 @@ export function checkEntraSetupReadiness(env:Record<string,string|undefined>):En
   if((key==="ENTRA_OAUTH_COOKIE_KEY"||key==="ENTRA_SESSION_KEY")&&
      !validEncryptionKey(value))missing.push(key+":invalid-key");
  }
+ if(env.ENTRA_REDIRECT_URI!==
+   "https://pamize-synapse-git-feature-comp-7ded4c-radekdomagalski1978-9203.vercel.app/api/compliance/auth/callback")
+  missing.push("APPROVED_PREVIEW_REDIRECT_URI");
+ if(!/^[0-9a-f-]{36}$/i.test(env.ENTRA_TENANT_ID||"")||
+    !/^[0-9a-f-]{36}$/i.test(env.ENTRA_API_CLIENT_ID||""))
+  missing.push("VALID_ENTRA_APP_IDENTIFIERS");
  if(env.ENTRA_OAUTH_COOKIE_KEY&&env.ENTRA_SESSION_KEY&&
     env.ENTRA_OAUTH_COOKIE_KEY===env.ENTRA_SESSION_KEY)missing.push("SEPARATE_ENCRYPTION_KEYS");
  return {ready:missing.length===0,missing};
