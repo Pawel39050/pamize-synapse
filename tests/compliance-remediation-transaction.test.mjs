@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import {commitRemediationTransition} from "../src/lib/compliance/remediation-transaction-coordinator.ts";
 const id="11111111-1111-4111-8111-111111111111",eventId="22222222-2222-4222-8222-222222222222";
 const principal={issuer:"entra-id-verified",subject:"owner",tenantId:"tenant",organizationIds:["org"],roles:["author"]};
-const input={principal,tenantId:"tenant",organizationId:"org",actionId:id,expectedRevision:1,expectedState:"assigned",nextState:"in-progress",eventId,eventHash:"a".repeat(64),previousHash:null,occurredAt:"2026-11-02T10:00:00Z"};
+const input={principal,tenantId:"tenant",organizationId:"org",actionId:id,expectedRevision:1,expectedState:"assigned",nextState:"in-progress",eventId,previousHash:null,occurredAt:"2026-11-02T10:00:00Z"};
 function fake({failInsert=false,owner="owner"}={}){
  const calls=[];let released=false;
  const provider={async connect(){return {
@@ -22,6 +22,9 @@ test("successful transaction commits scoped action and audit atomically",async()
  assert.equal(f.calls[0].sql,"BEGIN");
  assert.equal(f.calls.at(-1).sql,"COMMIT");
  assert.ok(f.calls.some(c=>c.sql.startsWith("INSERT")));
+ const event=f.calls.find(c=>c.sql.startsWith("INSERT"));
+ assert.match(event.params[9],/^[a-f0-9]{64}$/);
+ assert.equal(event.params[6],"owner");
  assert.equal(f.released(),true);
 });
 test("failed event insert rolls back the action update",async()=>{
@@ -38,5 +41,17 @@ test("cross organization permission check runs before connecting",async()=>{
 test("only assigned owner can progress",async()=>{
  const f=fake({owner:"someone-else"});
  await assert.rejects(commitRemediationTransition(input,f.provider),/Only owner/);
+ assert.equal(f.calls.at(-1).sql,"ROLLBACK");
+});
+
+test("rejects forged audit predecessor and rolls back",async()=>{
+ const f=fake();
+ await assert.rejects(commitRemediationTransition({...input,previousHash:"b".repeat(64)},f.provider),/Audit chain conflict/);
+ assert.equal(f.calls.at(-1).sql,"ROLLBACK");
+});
+test("independent reviewer cannot approve their own task",async()=>{
+ const f=fake();
+ const reviewer={...principal,roles:["reviewer"]};
+ await assert.rejects(commitRemediationTransition({...input,principal:reviewer,expectedState:"awaiting-review",nextState:"approved"},f.provider),/Stale revision|Self-review/);
  assert.equal(f.calls.at(-1).sql,"ROLLBACK");
 });
