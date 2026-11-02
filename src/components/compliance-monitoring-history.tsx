@@ -54,7 +54,7 @@ export async function ComplianceMonitoringHistory() {
           <div className="kpi-grid">
             <div className="kpi"><span>Zapisane stany źródeł</span><strong>{history.rows.length}</strong><small>Ostatnie 50 rekordów, bez duplikowania identycznych odcisków</small></div>
             <div className="kpi"><span>Źródła z historią</span><strong>{monitored.size}</strong><small>Z {legalSources.length} źródeł w rejestrze</small></div>
-            <div className="kpi"><span>Monitoring UODO</span><strong>06:00</strong><small>Codzienny harmonogram działa poza tym panelem; zapisy stanów źródeł są odrębne od zmian prawa</small></div>
+            <div className="kpi"><span>Harmonogram monitoringu UODO</span><strong>Niepotwierdzony</strong><small>Brak skonfigurowanego zadania UODO w vercel.json; historia może zawierać wyłącznie testy ręczne</small></div>
             <div className="kpi"><span>Zweryfikowane zmiany prawa</span><strong>0</strong><small>Brak zatwierdzonych analiz prawnych</small></div>
           </div>
           {history.rows.length === 0 ? <p className="muted">Brak zapisanych stanów monitoringu.</p> :
