@@ -1,7 +1,7 @@
-import type {VerifiedPrincipal} from "./assessment-authorization";
-import type {RemediationLedger} from "./remediation-audit-ledger";
-import {appendRemediationEvent,canAccessRemediation,verifyRemediationLedger} from "./remediation-audit-ledger";
-import {assignRemediation,advanceRemediation,type RemediationAction} from "./remediation-plan";
+import type {VerifiedPrincipal} from "./assessment-authorization.ts";
+import type {RemediationLedger} from "./remediation-audit-ledger.ts";
+import {appendRemediationEvent,canAccessRemediation,verifyRemediationLedger} from "./remediation-audit-ledger.ts";
+import {assignRemediation,advanceRemediation,type RemediationAction} from "./remediation-plan.ts";
 export type RemediationCommand=
  | {kind:"assign";actionId:string;expectedState:"proposed";ownerId:string;dueDate:string}
  | {kind:"progress";actionId:string;expectedState:"assigned"|"in-progress"|"rejected";to:"in-progress"|"awaiting-review"}
