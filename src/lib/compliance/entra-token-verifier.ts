@@ -3,6 +3,11 @@ import {createPublicKey,verify as verifySignature} from "node:crypto";
 import type {VerifiedPrincipal,ComplianceRole} from "./assessment-authorization";
 
 const b64=(s:string)=>Buffer.from(s,"base64url");
+const ROLE_MAP:Readonly<Record<string,ComplianceRole>>={"Compliance.Author":"author","Compliance.Reviewer":"reviewer","Compliance.Viewer":"viewer"};
+export function resolveEntraComplianceRoles(values:unknown):ComplianceRole[]{
+ if(!Array.isArray(values))return [];
+ return [...new Set(values.filter((v):v is string=>typeof v==="string").map(v=>ROLE_MAP[v]).filter((v):v is ComplianceRole=>!!v))];
+}
 type Claims={aud?:string;iss?:string;tid?:string;oid?:string;sub?:string;exp?:number;nbf?:number;roles?:unknown};
 type Jwk={kty:string;kid?:string;use?:string;alg?:string;n?:string;e?:string};
 export type EntraVerifierConfig={tenantId:string;clientId:string;organizationMemberships:Readonly<Record<string,readonly string[]>>};
@@ -11,7 +16,7 @@ export type EntraVerifierConfig={tenantId:string;clientId:string;organizationMem
  * organization membership supplied by a trusted server-side application database.
  * No routes are exposed until authentication and membership provisioning exist. */
 export async function verifyEntraAccessToken(token:string,config:EntraVerifierConfig):Promise<VerifiedPrincipal>{
- if(!/^[0-9a-f-]{36}$/i.test(config.tenantId)||!config.clientId.trim())throw Error("Invalid Entra configuration");
+ if(!/^[0-9a-f-]{36}$/i.test(config.tenantId)||!/^[0-9a-f-]{36}$/i.test(config.clientId))throw Error("Invalid Entra configuration");
  if(token.length>12000||!token||token.split(".").length!==3)throw Error("Invalid JWT envelope");
  const [h,p,s]=token.split(".");
  let header:{alg?:string;kid?:string;typ?:string},claims:Claims;
@@ -40,6 +45,6 @@ export async function verifyEntraAccessToken(token:string,config:EntraVerifierCo
  if(!valid)throw Error("JWT signature verification failed");
  const subject=claims.oid||claims.sub!;
  const organizations=config.organizationMemberships[subject]||[];
- const roles:Array<ComplianceRole>=Array.isArray(claims.roles)?claims.roles.filter((r):r is ComplianceRole=>r==="author"||r==="reviewer"||r==="viewer"):[];
+ const roles=resolveEntraComplianceRoles(claims.roles);
  return {issuer:"entra-id-verified",subject,tenantId:config.tenantId,roles,organizationIds:[...organizations]};
 }
