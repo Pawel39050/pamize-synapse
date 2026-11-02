@@ -1,13 +1,9 @@
 import "server-only";
 import {createPublicKey,verify as verifySignature} from "node:crypto";
-import type {VerifiedPrincipal,ComplianceRole} from "./assessment-authorization";
+import type {VerifiedPrincipal} from "./assessment-authorization";
+import {resolveEntraComplianceRoles} from "./entra-role-map";
 
 const b64=(s:string)=>Buffer.from(s,"base64url");
-const ROLE_MAP:Readonly<Record<string,ComplianceRole>>={"Compliance.Author":"author","Compliance.Reviewer":"reviewer","Compliance.Viewer":"viewer"};
-export function resolveEntraComplianceRoles(values:unknown):ComplianceRole[]{
- if(!Array.isArray(values))return [];
- return [...new Set(values.filter((v):v is string=>typeof v==="string").map(v=>ROLE_MAP[v]).filter((v):v is ComplianceRole=>!!v))];
-}
 type Claims={aud?:string;iss?:string;tid?:string;oid?:string;sub?:string;exp?:number;nbf?:number;roles?:unknown};
 type Jwk={kty:string;kid?:string;use?:string;alg?:string;n?:string;e?:string};
 export type EntraVerifierConfig={tenantId:string;clientId:string;organizationMemberships:Readonly<Record<string,readonly string[]>>};
