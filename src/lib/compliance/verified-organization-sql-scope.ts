@@ -1,6 +1,6 @@
 import type {VerifiedPrincipal} from "./assessment-authorization.ts";
 import type {TrustedMembershipDirectory} from "./organization-membership.ts";
-import {resolveOrganizationMemberships} from "./organization-membership.ts";
+import {resolveScopedOrganizationPrincipal} from "./scoped-organization-principal.ts";
 export type ScopedSqlConnection={
  query(sql:string,params:readonly unknown[]):Promise<{rows:Record<string,unknown>[];rowCount:number|null}>;
  release():void;
@@ -14,7 +14,7 @@ export async function withVerifiedOrganizationScope<T>(input:{
  directory:TrustedMembershipDirectory;provider:ScopedSqlProvider;
  work:(connection:ScopedSqlConnection)=>Promise<T>
 }):Promise<T>{
- const verified=await resolveOrganizationMemberships({identity:input.identity,directory:input.directory});
+ const verified=await resolveScopedOrganizationPrincipal({identity:input.identity,organizationId:input.organizationId,directory:input.directory});
  if(!input.organizationId.trim()||!verified.organizationIds.includes(input.organizationId))
    throw Error("Organization access forbidden");
  const connection=await input.provider.connect();
