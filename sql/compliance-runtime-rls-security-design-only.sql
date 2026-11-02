@@ -1,0 +1,30 @@
+-- SECURITY DESIGN ONLY: NOT AN EXECUTABLE MIGRATION.
+-- Runtime database user must not own the tables, have BYPASSRLS, or be
+-- accessible from the browser. Separate privileged migration and runtime roles.
+-- Must be reviewed and run ONLY on Neon branch br-bitter-pond-b97srhrd.
+-- Example transaction-scoped context:
+-- BEGIN;
+-- SELECT set_config('app.compliance_tenant_id', :verified_tenant, true);
+-- SELECT set_config('app.compliance_organization_id', :verified_org, true);
+-- ... parameterized queries ...
+-- COMMIT;
+-- The runtime role can set custom GUCs, therefore these policies are defense
+-- in depth, NOT independent identity verification: server must verify signed
+-- Entra session + trusted organization membership before opening transaction.
+--
+-- CREATE POLICY remediation_actions_scope ON public.compliance_remediation_actions
+-- FOR ALL TO compliance_runtime
+-- USING (tenant_id = current_setting('app.compliance_tenant_id', true)
+--    AND organization_id = current_setting('app.compliance_organization_id', true))
+-- WITH CHECK (tenant_id = current_setting('app.compliance_tenant_id', true)
+--    AND organization_id = current_setting('app.compliance_organization_id', true));
+-- CREATE POLICY remediation_events_scope ON public.compliance_remediation_events
+-- FOR SELECT TO compliance_runtime
+-- USING (tenant_id = current_setting('app.compliance_tenant_id', true)
+--    AND organization_id = current_setting('app.compliance_organization_id', true));
+-- A separate controlled write function is required for append-only audit events.
+-- Do not GRANT UPDATE/DELETE on compliance_remediation_events to runtime.
+-- Membership lookup must likewise use an authenticated tenant AND subject:
+-- SELECT ... WHERE tenant_id=$1 AND subject_id=$2; not generic client filtering.
+-- Refuse activation until an integration test proves cross-scope access fails,
+-- runtime cannot change grants or bypass RLS, and audit event deletion fails.
