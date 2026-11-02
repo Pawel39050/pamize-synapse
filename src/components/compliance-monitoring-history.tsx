@@ -1,5 +1,6 @@
 import "server-only";
 import { ComplianceAgentsDemo } from "./compliance-agents-demo";
+import { ComplianceAssessmentWorkbench } from "./compliance-assessment-workbench";
 import { legalSources } from "../lib/compliance/regulatory-sources";
 import { readComplianceHistory } from "../lib/compliance/history";
 import { listLegalActVersions } from "../lib/compliance/legal-version-store";
@@ -11,7 +12,7 @@ export async function ComplianceMonitoringHistory() {
   const legalVersions = await listLegalActVersions("32016R0679").catch(() => []);
   const corrigendum = await readGdprCorrigendumReport();
   return (
-    <><ComplianceAgentsDemo/><section className="section-block panel">
+    <><ComplianceAssessmentWorkbench/><ComplianceAgentsDemo/><section className="section-block panel">
       <div className="panel-top">
         <h2>Historia rzeczywistego monitoringu</h2>
         <span className="pill">{history.status === "connected" ? "NEON PREVIEW · ODCZYT" : "NIEDOSTĘPNA"}</span>
