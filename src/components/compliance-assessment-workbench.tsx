@@ -11,16 +11,18 @@ export function ComplianceAssessmentWorkbench(){
  const [evidence,setEvidence]=useState<Record<string,string[]>>({});
  const [processName,setProcessName]=useState("Przykładowy proces");
  const catalog=OBLIGATIONS.filter(o=>o.domain===domain);
- const findings=useMemo(()=>assessRegulatoryObligations({
-   organizationId:"LOCAL-UNSAVED-ASSESSMENT",domain,applicability:answers,evidence
- }),[domain,answers,evidence]);
+ const allFindings=useMemo(()=>[
+   ...assessRegulatoryObligations({organizationId:"LOCAL-UNSAVED-ASSESSMENT",domain:"GDPR",applicability:answers,evidence}),
+   ...assessRegulatoryObligations({organizationId:"LOCAL-UNSAVED-ASSESSMENT",domain:"AI_ACT",applicability:answers,evidence})
+ ],[answers,evidence]);
+ const findings=allFindings.filter(f=>catalog.some(o=>o.id===f.obligationId));
  const actions=useMemo(()=>planRegulatoryImpact(findings,[{
    processId:"LOCAL-PROCESS",processName:processName.trim()||"Proces bez nazwy",
    ownerId:null,obligationIds:catalog.map(o=>o.id)
  }]),[findings,processName,domain]);
  return <><section className="section-block panel">
    <div className="panel-top"><h2>Diagnostyka zgodności · wersja testowa</h2><span className="pill">LOKALNIE · BEZ ZAPISU</span></div>
-   <p className="muted">Wstępna analiza, nie opinia prawna. Wpisane odpowiedzi i nazwa procesu nie są wysyłane do Neon ani zapisywane na serwerze. Korzystaj wyłącznie z przykładowych lub niesensytywnych danych.</p>
+   <p className="muted">Wspólny dashboard podsumowuje RODO i AI Act; poniższy formularz pokazuje wybrany obszar. Wstępna analiza, nie opinia prawna. Wpisane odpowiedzi i nazwa procesu nie są wysyłane do Neon ani zapisywane na serwerze. Korzystaj wyłącznie z przykładowych lub niesensytywnych danych.</p>
    <div className="notice compact">
      <label htmlFor="compliance-domain">Obszar prawny: </label>
      <select id="compliance-domain" value={domain} onChange={e=>setDomain(e.target.value as RegulatoryDomain)}>
@@ -65,5 +67,5 @@ export function ComplianceAssessmentWorkbench(){
      </article>;
    })}</div>
    <button type="button" onClick={()=>{setAnswers({});setEvidence({});setProcessName("Przykładowy proces");}}>Wyczyść lokalną diagnozę</button>
- </section><ComplianceManagementDashboard findings={findings}/></>;
+ </section><ComplianceManagementDashboard findings={allFindings}/></>;
 }
