@@ -14,7 +14,7 @@ export function buildEntraAuthorizationUrl(args:{
  if(!/^[0-9a-f-]{36}$/i.test(args.tenantId)||!/^[0-9a-f-]{36}$/i.test(args.clientId))
   throw Error("Invalid Entra IDs");
  const redirect=new URL(args.redirectUri);
- if(redirect.protocol!=="https:"||!redirect.hostname.endsWith(".vercel.app")||
+ if(redirect.protocol!=="https:"||redirect.hostname!=="pamize-synapse-git-feature-comp-7ded4c-radekdomagalski1978-9203.vercel.app"||
     redirect.pathname!=="/api/compliance/auth/callback"||redirect.username||redirect.password)
   throw Error("Unapproved Preview callback URI");
  const u=new URL(`https://login.microsoftonline.com/${args.tenantId}/oauth2/v2.0/authorize`);
