@@ -1,7 +1,7 @@
-import type {VerifiedPrincipal} from "./assessment-authorization";
-import type {RemediationLedger} from "./remediation-audit-ledger";
-import type {RemediationCommand} from "./remediation-application-service";
-import {executeRemediationCommand,readAuthorizedRemediation} from "./remediation-application-service";
+import type {VerifiedPrincipal} from "./assessment-authorization.ts";
+import type {RemediationLedger} from "./remediation-audit-ledger.ts";
+import type {RemediationCommand} from "./remediation-application-service.ts";
+import {executeRemediationCommand,readAuthorizedRemediation} from "./remediation-application-service.ts";
 
 export type ScopedRemediationStore={
  load(input:{tenantId:string;organizationId:string}):Promise<{ledger:RemediationLedger;revision:number}>;
