@@ -11,10 +11,18 @@ export function evaluateComplianceDatabaseSecurity(rows){
   if(role.can_login||role.bypass_rls||role.superuser||role.create_db||role.create_role||role.neon_superuser_member)
    failures.push(role.name+": privileged or active");
  }
+ const requiredRoles=["compliance_runtime_login_preview","compliance_runtime_restricted_preview"];
+ for(const name of requiredRoles){if(rows.roles.filter(r=>r.name===name).length!==1)failures.push(name+": missing or duplicate role");}
  const policies=rows.policies;
  if(policies.some(p=>p.command!=="SELECT"))failures.push("Non-read-only policy exists");
  if(policies.some(p=>p.table_name==="compliance_organization_memberships"))
   failures.push("Membership table unexpectedly exposed");
+ const expectedPolicies=[["compliance_remediation_actions","preview_action_read_scope"],["compliance_remediation_events","preview_event_read_scope"]];
+ for(const [table,name] of expectedPolicies){
+  if(policies.filter(p=>p.table_name===table&&p.policy_name===name&&p.command==="SELECT"&&p.roles?.includes("compliance_runtime_restricted_preview")).length!==1)
+   failures.push(name+": missing or misconfigured policy");
+ }
+ if(policies.length!==expectedPolicies.length)failures.push("Unexpected additional policy");
  return {safe:failures.length===0,failures};
 }
 /** Run only with dedicated Preview database credentials. Read-only catalog inspection.
@@ -29,7 +37,7 @@ export async function inspectComplianceDatabaseSecurity(sql){
    EXISTS(SELECT 1 FROM pg_auth_members m JOIN pg_roles g ON g.oid=m.roleid
     WHERE m.member=r.oid AND g.rolname='neon_superuser') AS neon_superuser_member
    FROM pg_roles r WHERE r.rolname IN ('compliance_runtime_login_preview','compliance_runtime_restricted_preview')`,
-  sql`SELECT tablename AS table_name,cmd AS command FROM pg_policies WHERE schemaname='public'
+  sql`SELECT tablename AS table_name,policyname AS policy_name,cmd AS command,roles FROM pg_policies WHERE schemaname='public'
    AND tablename IN ('compliance_organization_memberships','compliance_remediation_actions','compliance_remediation_events')`
  ]);
  return evaluateComplianceDatabaseSecurity({tables,roles,policies});
