@@ -49,3 +49,23 @@ test("rejects administrative Neon role before setting tenant context",async()=>{
  assert.equal(h.calls.some(x=>x.sql.startsWith("SELECT set_config")),false);
  assert.equal(h.calls.at(-1).sql,"ROLLBACK");
 });
+
+test("revoked membership cannot establish tenant context",async()=>{
+ const h=harness([{...membership,status:"revoked"}]);
+ await assert.rejects(withVerifiedOrganizationScope({...h,identity,organizationId:"org-a",work:async()=>null}),/forbidden/);
+ assert.equal(h.connected,0);
+});
+test("cross-tenant directory corruption fails before opening a connection",async()=>{
+ const h=harness([{...membership,tenantId:"different-tenant"}]);
+ await assert.rejects(withVerifiedOrganizationScope({...h,identity,organizationId:"org-a",work:async()=>null}),/Cross-identity/);
+ assert.equal(h.connected,0);
+});
+test("missing database identity result rolls back without injecting organization",async()=>{
+ const h=harness();const original=h.provider.connect;
+ h.provider.connect=async()=>{const client=await original();const base=client.query;
+  client.query=async(sql,params)=>sql.startsWith("SELECT r.rolname")?{rows:[],rowCount:0}:base(sql,params);
+  return client;};
+ await assert.rejects(withVerifiedOrganizationScope({...h,identity,organizationId:"org-a",work:async()=>null}),/Unsafe database runtime identity/);
+ assert.equal(h.calls.some(c=>c.sql.startsWith("SELECT set_config")),false);
+ assert.equal(h.calls.at(-1).sql,"ROLLBACK");
+});
