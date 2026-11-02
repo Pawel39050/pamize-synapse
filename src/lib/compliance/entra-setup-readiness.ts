@@ -1,3 +1,8 @@
+export function validEncryptionKey(value:string):boolean{
+ if(!/^[A-Za-z0-9_-]{43}$/.test(value))return false;
+ const raw=Buffer.from(value,"base64url");
+ return raw.length===32&&raw.toString("base64url")===value;
+}
 export type EntraSetupReadiness={ready:boolean;missing:string[]};
 const REQUIREMENTS=["ENTRA_TENANT_ID","ENTRA_API_CLIENT_ID","ENTRA_REDIRECT_URI","ENTRA_CLIENT_SECRET","ENTRA_OAUTH_COOKIE_KEY","ENTRA_SESSION_KEY"] as const;
 /** Report names only, never values; no public authentication endpoint is enabled by this check. */
@@ -9,7 +14,7 @@ export function checkEntraSetupReadiness(env:Record<string,string|undefined>):En
   const value=env[key];
   if(!value?.trim()){missing.push(key);continue;}
   if((key==="ENTRA_OAUTH_COOKIE_KEY"||key==="ENTRA_SESSION_KEY")&&
-     Buffer.from(value,"base64url").length!==32)missing.push(key+":invalid-key");
+     !validEncryptionKey(value))missing.push(key+":invalid-key");
  }
  if(env.ENTRA_OAUTH_COOKIE_KEY&&env.ENTRA_SESSION_KEY&&
     env.ENTRA_OAUTH_COOKIE_KEY===env.ENTRA_SESSION_KEY)missing.push("SEPARATE_ENCRYPTION_KEYS");
