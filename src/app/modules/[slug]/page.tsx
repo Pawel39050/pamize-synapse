@@ -11,6 +11,7 @@ import { ComplianceMonitoringHistory } from "../../../components/compliance-moni
 import { ComplianceEvaluationFlow } from "../../../components/compliance-evaluation-flow";
 import { ProcurementControlSimulator } from "../../../components/procurement-control-simulator";
 import { ProcurementEventAudit } from "../../../components/procurement-event-audit";
+import { ProcurementEventLocalImport } from "../../../components/procurement-event-local-import";
 
 export const dynamic = "force-dynamic";
 
@@ -59,7 +60,7 @@ export default async function ModulePage({params}: PageProps) {
        slug==="clients-data" ? <DataModelPreview/> :
        slug==="skills-knowledge" ? <KnowledgeLibrary/> :
        slug==="talent-hunter" ? <TalentHunter/> :
-       slug==="compliance-guardian" ? <><ComplianceIdentityPanel/><ComplianceGuardian/><ComplianceEvaluationFlow/><ProcurementControlSimulator/><ProcurementEventAudit/><ComplianceMonitoringHistory/></> :
+       slug==="compliance-guardian" ? <><ComplianceIdentityPanel/><ComplianceGuardian/><ComplianceEvaluationFlow/><ProcurementControlSimulator/><ProcurementEventAudit/><ProcurementEventLocalImport/><ComplianceMonitoringHistory/></> :
        <section className="panel placeholder">
          <span className="placeholder-icon">◇</span>
          <h2>Moduł przygotowany do implementacji</h2>
