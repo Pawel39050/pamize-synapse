@@ -1,5 +1,6 @@
 "use client";
 import {useMemo,useState} from "react";
+import {initialAgents} from "../lib/catalog";
 import {OBLIGATIONS,assessRegulatoryObligations,type RegulatoryDomain} from "../lib/compliance/regulatory-obligation-engine";
 import {planRegulatoryImpact} from "../lib/compliance/regulatory-impact-planner";
 import {ComplianceManagementDashboard} from "./compliance-management-dashboard";
@@ -7,10 +8,12 @@ import {ComplianceManagementDashboard} from "./compliance-management-dashboard";
 /** Local-only diagnostics. No company data are submitted to a server or persisted. */
 export function ComplianceAssessmentWorkbench(){
  const [domain,setDomain]=useState<RegulatoryDomain>("GDPR");
+ const [agentKey,setAgentKey]=useState(initialAgents[0]?.key??"");
+ const selectedAgent=initialAgents.find(a=>a.key===agentKey);
  const [answers,setAnswers]=useState<Record<string,"yes"|"no"|"unknown">>({});
  const [evidence,setEvidence]=useState<Record<string,string[]>>({});
  const [processName,setProcessName]=useState("Przykładowy proces");
- const [card,setCard]=useState<{process:string;createdAt:string;items:{article:string;status:string;reason:string;missing:string[]}[]}|null>(null);
+ const [card,setCard]=useState<{process:string;agentKey:string;agentName:string;createdAt:string;items:{article:string;status:string;reason:string;missing:string[]}[]}|null>(null);
  const catalog=OBLIGATIONS.filter(o=>o.domain===domain);
  const allFindings=useMemo(()=>[
    ...assessRegulatoryObligations({organizationId:"LOCAL-UNSAVED-ASSESSMENT",domain:"GDPR",applicability:answers,evidence}),
@@ -25,6 +28,9 @@ export function ComplianceAssessmentWorkbench(){
    <div className="panel-top"><h2>Diagnostyka zgodności · wersja testowa</h2><span className="pill">LOKALNIE · BEZ ZAPISU</span></div>
    <p className="muted">Wspólny dashboard podsumowuje RODO i AI Act; poniższy formularz pokazuje wybrany obszar. Wstępna analiza, nie opinia prawna. Wpisane odpowiedzi i nazwa procesu nie są wysyłane do Neon ani zapisywane na serwerze. Korzystaj wyłącznie z przykładowych lub niesensytywnych danych.</p>
    <div className="notice compact">
+     <label htmlFor="compliance-agent">Agent z rejestru: </label>
+     <select id="compliance-agent" value={agentKey} onChange={e=>{setAgentKey(e.target.value);setCard(null);}}>{initialAgents.map(a=><option key={a.key} value={a.key}>{a.name} ({a.key})</option>)}</select>
+     <p className="muted">Identyfikator definicji z Agent Registry; nie jest identyfikatorem wdrożenia klienta.</p>
      <label htmlFor="compliance-domain">Obszar prawny: </label>
      <select id="compliance-domain" value={domain} onChange={e=>setDomain(e.target.value as RegulatoryDomain)}>
        <option value="GDPR">RODO</option><option value="AI_ACT">AI Act</option>
@@ -69,13 +75,14 @@ export function ComplianceAssessmentWorkbench(){
    })}</div>
    <div style={{display:"flex",flexWrap:"wrap",gap:12,margin:"18px 0"}}>
     <button type="button" onClick={()=>{
-     setCard({process:processName.trim()||"Proces bez nazwy",createdAt:new Date().toISOString(),
+     setCard({process:processName.trim()||"Proces bez nazwy",agentKey,agentName:selectedAgent?.name??"Nieznany agent",createdAt:new Date().toISOString(),
       items:allFindings.map(f=>({article:f.article,status:f.status,reason:f.reason,missing:[...f.missingEvidence]}))});
     }}>Wygeneruj AI Compliance Card (wersja robocza)</button>
     <button type="button" onClick={()=>{setAnswers({});setEvidence({});setProcessName("Przykładowy proces");setCard(null);}}>Wyczyść lokalną diagnozę</button>
    </div>
    {card&&<section className="panel" role="status" aria-label="Robocza AI Compliance Card">
     <div className="panel-top"><h3>AI Compliance Card · wstępna karta</h3><span className="pill">WYMAGA EKSPERTA</span></div>
+    <p><strong>Cyfrowy pracownik (Agent Registry):</strong> {card.agentName} · {card.agentKey}</p>
     <p><strong>Proces:</strong> {card.process}</p>
     <p><strong>Sporządzono:</strong> {new Date(card.createdAt).toLocaleString("pl-PL")}</p>
     <p><strong>Zakres:</strong> pięć wybranych obowiązków AI Act i RODO. Brak oceny klasyfikacji wysokiego ryzyka, DPIA i pełnej analizy NIS2/DORA.</p>
