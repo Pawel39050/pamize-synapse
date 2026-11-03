@@ -16,7 +16,9 @@ const init=()=>{
   seen.add(id);return {rows:[{nonce:params[3]}]};
  }};
  const lookup={resolve:async()=>record};
- return {request:{keyId,envelope},lookup,replayExecutor,verifiedExpectedScope:scope,now,record};
+ const safeRole={roleName:"compliance_agent_replay_rls_probe",canLogin:false,bypassRls:false,superuser:false,canCreateRole:false,canCreateDb:false,rlsEnabled:true,rlsForced:true};
+ const databaseRoleFacts=async()=>safeRole;
+ return {request:{keyId,envelope},lookup,replayExecutor,databaseRoleFacts,verifiedExpectedScope:scope,now,record,safeRole};
 };
 test("valid internal request still does not authenticate ERP evidence",async()=>{
  const a=init();const r=await checkInternalAgentEventRequest(a);
@@ -49,4 +51,18 @@ test("database failures do not authorize ingestion",async()=>{
 test("unknown key id rejected",async()=>{
  const a=init();a.request.keyId="key-other";
  await assert.rejects(checkInternalAgentEventRequest(a));
+});
+
+test("role preflight rejects bypass RLS and login privileges",async()=>{
+ for(const unsafe of [{bypassRls:true},{canLogin:true},{canCreateDb:true},{rlsForced:false}]){
+  const a=init();a.databaseRoleFacts=async()=>({...a.safeRole,...unsafe});
+  await assert.rejects(checkInternalAgentEventRequest(a));
+ }
+});
+test("unavailable database role information prevents nonce reservation",async()=>{
+ const a=init();let called=false;
+ a.databaseRoleFacts=async()=>null;
+ a.replayExecutor={insertOnce:async()=>{called=true;return {rows:[]}}};
+ await assert.rejects(checkInternalAgentEventRequest(a));
+ assert.equal(called,false);
 });
