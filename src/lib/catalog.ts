@@ -36,6 +36,7 @@ export const modules: SynapseModule[] = [
 ];
 
 export const initialAgents: AgentDefinition[] = [
+  {key:"AG-PRC-001",version:"0.1.0",name:"Cyfrowy Pracownik Zakupów (DEMO)",family:"Procurement",purpose:"Analiza zapotrzebowań, ofert dostawców i rekomendowanie wyboru ofert; wysyłanie zapytań oraz decyzje zakupowe wyłącznie w granicach uprawnień, z zatwierdzeniem przez człowieka.",skillKeys:["purchase-request-intake","supplier-offer-analysis","rfq-draft","human-approval"],toolKeys:[],lifecycle:"planned"},
   {key:"AG-GOV-001",version:"0.1.0",name:"PAMIZE Compliance Guardian",family:"Governance",purpose:"Monitorowanie regulacji, ocena zgodności procedur agentów i analiza wpływu zmian prawa na Synapse.",skillKeys:["regulatory-intelligence","ai-act-assessment","gdpr-assessment","regulatory-impact-analysis","compliance-card-generator"],toolKeys:[],lifecycle:"planned"},
   {key:"AG-CORE-001",version:"0.1.0",name:"Enterprise Diagnostic Coordinator",family:"Strategic",purpose:"Delegowanie diagnoz i konsolidacja ustaleń.",skillKeys:["coordinate-diagnosis","compare-findings"],toolKeys:["tasks.read","findings.read"],lifecycle:"planned"},
   {key:"AG-ORG-001",version:"0.1.0",name:"Discovery Agent",family:"Organization",purpose:"Wywiad adaptacyjny i diagnoza organizacyjna.",skillKeys:["run-survey","generate-hypotheses"],toolKeys:["surveys.read"],lifecycle:"planned"},
