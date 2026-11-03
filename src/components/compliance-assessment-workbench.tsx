@@ -10,6 +10,7 @@ export function ComplianceAssessmentWorkbench(){
  const [answers,setAnswers]=useState<Record<string,"yes"|"no"|"unknown">>({});
  const [evidence,setEvidence]=useState<Record<string,string[]>>({});
  const [processName,setProcessName]=useState("Przykładowy proces");
+ const [card,setCard]=useState<{process:string;createdAt:string;items:{article:string;status:string;reason:string;missing:string[]}[]}|null>(null);
  const catalog=OBLIGATIONS.filter(o=>o.domain===domain);
  const allFindings=useMemo(()=>[
    ...assessRegulatoryObligations({organizationId:"LOCAL-UNSAVED-ASSESSMENT",domain:"GDPR",applicability:answers,evidence}),
@@ -66,6 +67,26 @@ export function ComplianceAssessmentWorkbench(){
        <small>Ocena wstępna · obowiązkowa akceptacja człowieka</small>
      </article>;
    })}</div>
-   <button type="button" onClick={()=>{setAnswers({});setEvidence({});setProcessName("Przykładowy proces");}}>Wyczyść lokalną diagnozę</button>
+   <div style={{display:"flex",flexWrap:"wrap",gap:12,margin:"18px 0"}}>
+    <button type="button" onClick={()=>{
+     setCard({process:processName.trim()||"Proces bez nazwy",createdAt:new Date().toISOString(),
+      items:allFindings.map(f=>({article:f.article,status:f.status,reason:f.reason,missing:[...f.missingEvidence]}))});
+    }}>Wygeneruj AI Compliance Card (wersja robocza)</button>
+    <button type="button" onClick={()=>{setAnswers({});setEvidence({});setProcessName("Przykładowy proces");setCard(null);}}>Wyczyść lokalną diagnozę</button>
+   </div>
+   {card&&<section className="panel" role="status" aria-label="Robocza AI Compliance Card">
+    <div className="panel-top"><h3>AI Compliance Card · wstępna karta</h3><span className="pill">WYMAGA EKSPERTA</span></div>
+    <p><strong>Proces:</strong> {card.process}</p>
+    <p><strong>Sporządzono:</strong> {new Date(card.createdAt).toLocaleString("pl-PL")}</p>
+    <p><strong>Zakres:</strong> pięć wybranych obowiązków AI Act i RODO. Brak oceny klasyfikacji wysokiego ryzyka, DPIA i pełnej analizy NIS2/DORA.</p>
+    <p><strong>Wynik:</strong> {card.items.filter(i=>i.status==="potential-gap").length} potencjalnych braków dowodów; {card.items.filter(i=>i.status==="requires-evidence").length} kwestii bez ustalonego zastosowania.</p>
+    <div className="agent-list">{card.items.map((item,i)=><article className="model-card" key={i}>
+      <h4>{item.article} · {item.status==="potential-gap"?"Potencjalny brak dowodów":item.status==="requires-evidence"?"Zastosowanie nieustalone":"Wymaga weryfikacji"}</h4>
+      <p>{item.reason}</p>
+      {item.missing.length>0&&<p>Wymagane materiały do sprawdzenia: {item.missing.join(", ")}</p>}
+    </article>)}</div>
+    <p className="muted"><strong>Decyzja:</strong> niezatwierdzona. Wynik nie jest stwierdzeniem zgodności ani naruszenia prawa. Dane pozostają wyłącznie w bieżącej sesji przeglądarki.</p>
+    <button type="button" onClick={()=>setCard(null)}>Zamknij kartę roboczą</button>
+   </section>}
  </section><ComplianceManagementDashboard findings={allFindings}/></>;
 }
