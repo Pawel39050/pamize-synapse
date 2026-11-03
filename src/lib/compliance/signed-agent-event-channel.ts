@@ -1,4 +1,3 @@
-import "server-only";
 import {createHmac,timingSafeEqual} from "node:crypto";
 import {parseLocalProcurementEvents,type LocalEventReview} from "./procurement-event-local-import.ts";
 
