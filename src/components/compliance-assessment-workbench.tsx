@@ -6,9 +6,8 @@ import {planRegulatoryImpact} from "../lib/compliance/regulatory-impact-planner"
 import {ComplianceManagementDashboard} from "./compliance-management-dashboard";
 
 /** Local-only diagnostics. No company data are submitted to a server or persisted. */
-export function ComplianceAssessmentWorkbench(){
+export function ComplianceAssessmentWorkbench({agentKey,onAgentChange}:{agentKey:string;onAgentChange:(key:string)=>void}){
  const [domain,setDomain]=useState<RegulatoryDomain>("GDPR");
- const [agentKey,setAgentKey]=useState(initialAgents[0]?.key??"");
  const selectedAgent=initialAgents.find(a=>a.key===agentKey);
  const [answers,setAnswers]=useState<Record<string,"yes"|"no"|"unknown">>({});
  const [evidence,setEvidence]=useState<Record<string,string[]>>({});
@@ -29,7 +28,7 @@ export function ComplianceAssessmentWorkbench(){
    <p className="muted">Wspólny dashboard podsumowuje RODO i AI Act; poniższy formularz pokazuje wybrany obszar. Wstępna analiza, nie opinia prawna. Wpisane odpowiedzi i nazwa procesu nie są wysyłane do Neon ani zapisywane na serwerze. Korzystaj wyłącznie z przykładowych lub niesensytywnych danych.</p>
    <div className="notice compact">
      <label htmlFor="compliance-agent">Agent z rejestru: </label>
-     <select id="compliance-agent" value={agentKey} onChange={e=>{setAgentKey(e.target.value);setCard(null);}}>{initialAgents.map(a=><option key={a.key} value={a.key}>{a.name} ({a.key})</option>)}</select>
+     <select id="compliance-agent" value={agentKey} onChange={e=>{onAgentChange(e.target.value);setCard(null);}}>{initialAgents.map(a=><option key={a.key} value={a.key}>{a.name} ({a.key})</option>)}</select>
      <p className="muted">Identyfikator definicji z Agent Registry; nie jest identyfikatorem wdrożenia klienta.</p>
      <label htmlFor="compliance-domain">Obszar prawny: </label>
      <select id="compliance-domain" value={domain} onChange={e=>setDomain(e.target.value as RegulatoryDomain)}>
