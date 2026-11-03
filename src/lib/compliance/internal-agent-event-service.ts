@@ -1,5 +1,6 @@
 import {verifySignedProcurementBatch,type SignedProcurementBatch,type TrustedAgentChannel,type VerifiedTransportReview} from "./signed-agent-event-channel.ts";
 import {makeRestrictedReplayRegistry,type RestrictedReplayExecutor} from "./restricted-replay-registry.ts";
+import {assertSafeAgentReplayRole,type DatabaseRoleFacts} from "./agent-replay-role-preflight.ts";
 
 /**
  * Internal service composition only: no API route, no credentials embedded, no database
@@ -22,15 +23,17 @@ export async function checkInternalAgentEventRequest(input:{
  request:SignedAgentEventRequest;
  lookup:CredentialLookup;
  replayExecutor:RestrictedReplayExecutor;
+ databaseRoleFacts:()=>Promise<DatabaseRoleFacts|null>;
  verifiedExpectedScope:{tenantId:string;organizationId:string;agentKey:"AG-PRC-001"};
  now?:number;
 }):Promise<VerifiedTransportReview>{
- const {request,lookup,replayExecutor,verifiedExpectedScope:scope}=input;
+ const {request,lookup,replayExecutor,databaseRoleFacts,verifiedExpectedScope:scope}=input;
  const now=input.now??Date.now();
  if(!request||!request.envelope||!keyIdPattern.test(request.keyId)||!lookup||
-  typeof lookup.resolve!=="function"||!replayExecutor||
+  typeof lookup.resolve!=="function"||!replayExecutor||typeof databaseRoleFacts!=="function"||
   !scope||scope.agentKey!=="AG-PRC-001"||!scope.tenantId||!scope.organizationId||
   !Number.isSafeInteger(now))throw Error("Channel unavailable");
+ assertSafeAgentReplayRole(await databaseRoleFacts(),"compliance_agent_replay_rls_probe");
  const b=request.envelope;
  if(b.tenantId!==scope.tenantId||b.organizationId!==scope.organizationId||b.agentKey!==scope.agentKey)
   throw Error("Agent scope mismatch");
