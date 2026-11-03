@@ -20,7 +20,7 @@ export function previewMembershipDirectory():TrustedMembershipDirectory{
  if(!url||!expected||!forbidden)throw Error("Membership database configuration missing");
  const parsed=new URL(url);
  if(!["postgres:","postgresql:"].includes(parsed.protocol)||
-    parsed.hostname!==expected||parsed.hostname===forbidden||
+    ![expected,expected.replace(".", "-pooler.")].includes(parsed.hostname)||parsed.hostname===forbidden||
     expected===forbidden||!expected.endsWith(".neon.tech")||
     decodeURIComponent(parsed.username)!==LOGIN_ROLE)
   throw Error("Unsafe membership database connection");
