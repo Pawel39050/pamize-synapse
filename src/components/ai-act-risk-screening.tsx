@@ -10,9 +10,8 @@ const questions:{key:keyof AiActScreeningInput;label:string;help:string}[]=[
 ];
 const empty:AiActScreeningInput={prohibitedPractice:"unknown",annexIIIContext:"unknown",safetyComponent:"unknown",directlyInteractsWithPeople:"unknown"};
 const names={ "priority-legal-review":"Pilna ocena prawna", "high-risk-screening":"Wymaga pełnej kwalifikacji wysokiego ryzyka","transparency-review":"Weryfikacja przejrzystości", "classification-incomplete":"Klasyfikacja nieustalona"};
-export function AiActRiskScreening(){
+export function AiActRiskScreening({agentKey,onAgentChange}:{agentKey:string;onAgentChange:(key:string)=>void}){
  const [answers,setAnswers]=useState<AiActScreeningInput>(empty);
- const [agentKey,setAgentKey]=useState(initialAgents[0]?.key??"");
  const [intendedPurpose,setIntendedPurpose]=useState("");
  const [providerRole,setProviderRole]=useState(false);
  const [deployerRole,setDeployerRole]=useState(false);
@@ -24,7 +23,7 @@ export function AiActRiskScreening(){
   <p className="muted">Cztery pytania przesiewowe wskazują, które przepisy należy zbadać. Wynik nie przyznaje kategorii „minimalne ryzyko”, nie zwalnia z obowiązków i nie zastępuje kwalifikacji prawnika. Dane nie są wysyłane na serwer.</p>
   <div className="notice compact">
    <label htmlFor="risk-agent"><strong>System z Agent Registry:</strong></label>
-   <select id="risk-agent" value={agentKey} onChange={e=>{setAgentKey(e.target.value);setEvaluated(false);}}>
+   <select id="risk-agent" value={agentKey} onChange={e=>{onAgentChange(e.target.value);setEvaluated(false);}}>
     {initialAgents.map(a=><option key={a.key} value={a.key}>{a.name} ({a.key})</option>)}
    </select>
    <p className="muted">Katalog zawiera definicje demonstracyjne, nie zweryfikowane wdrożenia klientów. Wybór agenta nie przesądza o przeznaczeniu systemu ani jego klasyfikacji prawnej.</p>
