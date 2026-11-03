@@ -1,0 +1,33 @@
+name: Compliance Guardian - branch validation
+on:
+  push:
+    branches:
+      - feature/compliance-guardian
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: compliance-guardian-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Security and compliance regression tests
+        run: |
+          npm run test:compliance:role-preflight
+          npm run test:compliance:internal-event-service
+          npm run test:compliance:signed-events
+          npm run test:compliance:replay-registry
+          npm run test:compliance:event-import
+      - name: Static TypeScript check
+        run: npm run typecheck
+      - name: Complete application build (no production credentials)
+        run: npm run build
