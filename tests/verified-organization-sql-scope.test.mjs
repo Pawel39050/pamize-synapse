@@ -69,3 +69,27 @@ test("missing database identity result rolls back without injecting organization
  assert.equal(h.calls.some(c=>c.sql.startsWith("SELECT set_config")),false);
  assert.equal(h.calls.at(-1).sql,"ROLLBACK");
 });
+
+test("a different subject in the same organization is denied before SQL connection",async()=>{
+ const h=harness([{...membership,subject:"other-user"}]);
+ await assert.rejects(withVerifiedOrganizationScope({...h,identity,organizationId:"org-a",work:async()=>null}),/Cross-identity/);
+ assert.equal(h.connected,0);
+});
+
+test("no membership denies even a valid Entra identity before SQL connection",async()=>{
+ const h=harness([]);
+ await assert.rejects(withVerifiedOrganizationScope({...h,identity,organizationId:"org-a",work:async()=>null}),/Organization access forbidden/);
+ assert.equal(h.connected,0);
+});
+
+test("an Entra author cannot inherit a membership's reviewer role",async()=>{
+ const h=harness([{...membership,roles:["reviewer"]}]);
+ await assert.rejects(withVerifiedOrganizationScope({...h,identity,organizationId:"org-a",work:async()=>null}),/Organization access forbidden/);
+ assert.equal(h.connected,0);
+});
+
+test("a forged pre-populated organization list is not trusted",async()=>{
+ const h=harness([]);
+ await assert.rejects(withVerifiedOrganizationScope({...h,identity:{...identity,organizationIds:["org-a"]},organizationId:"org-a",work:async()=>null}),/Untrusted identity or scope/);
+ assert.equal(h.connected,0);
+});
