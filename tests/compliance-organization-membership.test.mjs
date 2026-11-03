@@ -22,3 +22,30 @@ test("rejects cross-tenant or cross-subject directory corruption",async()=>{
 test("rejects client pre-populated memberships",async()=>{
  await assert.rejects(resolveOrganizationMemberships({identity:{...identity,organizationIds:["org-a"]},directory:directory([member()])}),/Untrusted/);
 });
+
+import {createMembershipDirectory} from "../src/lib/compliance/database-membership-directory.ts";
+const dbRow=(change={})=>({tenant_id:"tenant-a",subject_id:"user-a",organization_id:"org-a",status:"active",role:"author",...change});
+test("database directory accepts valid membership for signed-in identity",async()=>{
+ const d=createMembershipDirectory(async({tenantId,subject})=>{
+  assert.equal(tenantId,"tenant-a");assert.equal(subject,"user-a");return [dbRow()];
+ });
+ const p=await resolveOrganizationMemberships({identity,directory:d});
+ assert.deepEqual(p.organizationIds,["org-a"]);
+});
+test("database directory denies unprovisioned organization",async()=>{
+ const p=await resolveOrganizationMemberships({identity,directory:createMembershipDirectory(async()=>[])});
+ assert.deepEqual(p.organizationIds,[]);
+});
+test("database directory rejects cross-identity rows",async()=>{
+ for(const record of [dbRow({tenant_id:"tenant-b"}),dbRow({subject_id:"user-b"})]){
+  await assert.rejects(resolveOrganizationMemberships({identity,directory:createMembershipDirectory(async()=>[record])}),/Cross-identity/);
+ }
+});
+test("database directory rejects malformed status and role",async()=>{
+ for(const record of [dbRow({role:"admin"}),dbRow({status:"pending"}),dbRow({organization_id:""})]){
+  await assert.rejects(resolveOrganizationMemberships({identity,directory:createMembershipDirectory(async()=>[record])}));
+ }
+});
+test("database directory rejects excessive membership response",async()=>{
+ await assert.rejects(resolveOrganizationMemberships({identity,directory:createMembershipDirectory(async()=>Array.from({length:101},()=>dbRow()))}),/Invalid membership response/);
+});
