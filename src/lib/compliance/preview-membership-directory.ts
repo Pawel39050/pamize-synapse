@@ -4,7 +4,7 @@ import {createMembershipDirectory} from "./database-membership-directory";
 import {denyAllMembershipDirectory,type TrustedMembershipDirectory} from "./organization-membership";
 
 const EXPECTED_BRANCH_MARKER="pamize-compliance-preview-br-bitter-pond-b97srhrd";
-const LOGIN_ROLE="compliance_membership_login_preview";
+const LOGIN_ROLE="compliance_membership_login_restricted";
 
 /** Safe default: not enabled without a dedicated least-privilege Neon login.
  * Never reuse COMPLIANCE_DATABASE_URL or the database owner for identity lookups. */
