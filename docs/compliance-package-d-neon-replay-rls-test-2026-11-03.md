@@ -16,7 +16,7 @@ Tabela: `public.compliance_agent_event_replay_nonces`.
 - Weryfikacja `pg_roles` potwierdziła `rolcanlogin=false`, `rolbypassrls=false`, `rolcreaterole=false`.
 - RLS: `ENABLE` + `FORCE`.
 - Dwie polityki RLS dotyczą wyłącznie `tenant-test-a`, `org-test-a`, `AG-PRC-001`, ograniczając INSERT i SELECT. Nie są politykami dla klientów.
-- Ograniczone uprawnienia tabeli: INSERT wybranych kolumn oraz SELECT potrzebny do `RETURNING nonce`.
+- Ograniczone granty kolumnowe: INSERT wybranych kolumn oraz SELECT potrzebny do `RETURNING nonce`. `information_schema.role_table_grants` nie pokazuje tych grantów kolumnowych, a `has_table_privilege` zwraca `false` dla testowej roli; rozstrzygające testy wykonano w transakcji `SET LOCAL ROLE`, gdzie INSERT/SELECT działają, a UPDATE/DELETE są odrzucane. Należy nadal administracyjnie zweryfikować szczegóły grantów.
 - Odczyt/aktualizacja/usuwanie innych danych nie są przyznawane. Żadnego dostępu aplikacyjnego, poświadczeń i publicznego endpointu.
 - `SET LOCAL ROLE` w transakcji umożliwiło przetestowanie zachowania tego samego ograniczonego kontekstu.
 
@@ -41,8 +41,7 @@ Wywołanie Neon `create_postgres_role` z `no_login=true` dla roli
 `pg_roles` wykazało `rolcanlogin=true`, `rolbypassrls=true`,
 `rolcreaterole=true` oraz `rolcreatedb=true`.
 `ALTER ROLE ... NOLOGIN NOBYPASSRLS` zwróciło `permission denied`.
-Ta rola nie była wykorzystana w testach RLS, nie dostała uprawnień do
-nowej tabeli i **nie może zostać użyta do obsługi agenta**.
+Ta rola nie była wykorzystana w testach RLS. Nie nadaliśmy jej bezpośrednich grantów do nowej tabeli, lecz sprawdzenie `has_table_privilege` wykazało efektywne uprawnienia INSERT/UPDATE/DELETE (możliwy efekt szerszych uprawnień Neon). **Nie może zostać użyta do obsługi agenta**.
 Jej trwałe usunięcie lub ograniczenie wymaga administracyjnej procedury
 z odpowiednimi uprawnieniami.
 
