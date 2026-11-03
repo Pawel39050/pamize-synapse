@@ -14,7 +14,7 @@ export function ComplianceEvaluationFlow(){
    <strong>Scenariusz demonstracyjny: Cyfrowy Pracownik Zakupów.</strong>
    <p>Analiza ofert i rekomendacja dostawcy; decyzje i zamówienia wymagają zatwierdzenia przez człowieka. W obu formularzach wybierasz tę samą definicję agenta z Agent Registry. Żadne dane nie trafiają do bazy klientów.</p>
   </div>
-  <AiActRiskScreening agentKey={agentKey} onAgentChange={setAgentKey}/>
-  <ComplianceAssessmentWorkbench agentKey={agentKey} onAgentChange={setAgentKey}/>
+  <AiActRiskScreening key={agentKey} agentKey={agentKey} onAgentChange={setAgentKey}/>
+  <ComplianceAssessmentWorkbench key={agentKey} agentKey={agentKey} onAgentChange={setAgentKey}/>
  </>;
 }
